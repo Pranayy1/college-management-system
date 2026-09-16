@@ -1,0 +1,189 @@
+import {
+    HashRouter as Router,
+    Routes,
+    Route,
+    Navigate,
+    useLocation
+} from "react-router-dom";
+import { useEffect } from "react";
+
+import Login from "./pages/Login";
+import OAuthSuccess from "./pages/OAuthSuccess";
+
+import VerifyMarksheet from "./pages/VerifyMarksheet";
+
+import AdminLayout from "./pages/Admin/AdminLayout";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminProfile from "./pages/Admin/AdminProfile";
+import Courses from "./pages/Admin/Courses";
+import Subjects from "./pages/Admin/Subjects";
+import AssignSubjects from "./pages/Admin/AssignSubjects";
+import Faculties from "./pages/Admin/Faculties.jsx";
+import Students from "./pages/Admin/Students.jsx";
+import TakeAttendance from "./pages/Admin/TakeAttendance";
+import EditAttendance from "./pages/Admin/EditAttendance";
+import AttendanceReport from "./pages/Admin/AttendanceReport";
+import EnterMarks from "./pages/Admin/EnterMarks";
+import EditMarks from "./pages/Admin/EditMarks";
+import MarksReport from "./pages/Admin/MarksReport";
+import PrintMarksheet from "./pages/Admin/PrintMarksheet";
+
+import FacultyDashboard from "./pages/Faculty/FacultyDashboard";
+import FacultyLayout from "./pages/Faculty/FacultyLayout.jsx";
+import FacultyProfile from "./pages/Faculty/FacultyProfile.jsx";
+import FacultyTakeAttendance from "./pages/Faculty/FacultyTakeAttendance";
+import FacultyEditAttendance from "./pages/Faculty/FacultyEditAttendance";
+import FacultyEnterMarks from "./pages/Faculty/FacultyEnterMarks";
+import FacultyAttendanceReport from "./pages/Faculty/FacultyAttendanceReport";
+import FacultyMarksReport from "./pages/Faculty/FacultyMarksReport";
+
+import StudentDashboard from "./pages/Student/StudentDashboard";
+import StudentLayout from "./pages/Student/StudentLayout.jsx"
+import StudentProfile from "./pages/Student/StudentProfile";
+import StudentAttendance from "./pages/Student/StudentAttendance";
+import StudentMarksheet from "./pages/Student/StudentMarksheet";
+
+import ProtectedRoute from "./routes/ProtectedRoute";
+
+/* ===================== Route Tracker ===================== */
+
+const RouteTracker = () => {
+    const location = useLocation();
+    const token = localStorage.getItem("token");
+
+    useEffect(() => {
+        if (
+            token &&
+            location.pathname !== "/" &&
+            location.pathname !== "/oauth-success"
+        ) {
+            localStorage.setItem("lastPage", location.pathname);
+        }
+    }, [location, token]);
+    return null;
+};
+
+/* ===================== Root Handler ===================== */
+
+const RootHandler = () => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+    const lastPage = localStorage.getItem("lastPage");
+
+    // Not logged in → show Login
+    if (!token) {
+        return <Login />;
+    }
+
+    // Logged in → go back to last visited page
+    if (lastPage) {
+        return <Navigate to={lastPage} replace />;
+    }
+
+    // Fallback by role
+    if (role === "admin") {
+        return <Navigate to="/admin/dashboard" replace />;
+    }
+
+    if (role === "faculty") {
+        return <Navigate to="/faculty/dashboard" replace />;
+    }
+
+    if (role === "student") {
+        return <Navigate to="/student/dashboard" replace />;
+    }
+
+    return <Login />;
+};
+
+/* ===================== App ===================== */
+
+function App() {
+    return (
+        <Router>
+            <RouteTracker />
+
+            <Routes>
+
+                {/* Smart Root Route */}
+                <Route path="/" element={<RootHandler />} />
+
+                {/* Print Marksheet */}
+                <Route path="/print-marksheet" element={<PrintMarksheet />} />
+
+                {/* OAuth Redirect Handler */}
+                <Route path="/oauth-success" element={<OAuthSuccess />} />
+
+                {/* Public marksheet verification */}
+                <Route path="/verify/marksheet/:marksheetId" element={<VerifyMarksheet />} />
+
+                {/* ===================== Admin Section ===================== */}
+                <Route
+                    path="/admin"
+                    element={
+                        <ProtectedRoute allowedRole="admin">
+                            <AdminLayout />
+                        </ProtectedRoute>
+                    }
+                >
+                    <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="profile" element={<AdminProfile />} />
+                    <Route path="courses" element={<Courses />} />
+                    <Route path="subjects" element={<Subjects />} />
+                    <Route path="assign-subjects" element={<AssignSubjects />} />
+                    <Route path="faculties" element={<Faculties />} />
+                    <Route path="students" element={<Students />} />
+                    <Route path="take-attendance" element={<TakeAttendance />} />
+                    <Route path="edit-attendance" element={<EditAttendance />} />
+                    <Route path="attendance-report" element={<AttendanceReport />} />
+                    <Route path="enter-marks" element={<EnterMarks />} />
+                    <Route path="edit-marks" element={<EditMarks />} />
+                    <Route path="marks-report" element={<MarksReport />} />
+                    <Route path="print-marksheet" element={<PrintMarksheet />} />
+                </Route>
+
+                {/* ===================== Faculty ===================== */}
+                <Route
+    path="/faculty"
+    element={
+        <ProtectedRoute allowedRole="faculty">
+            <FacultyLayout />
+        </ProtectedRoute>
+    }
+>
+    <Route path="dashboard" element={<FacultyDashboard />} />
+    <Route path="take-attendance" element={<FacultyTakeAttendance />} />
+    <Route path="edit-attendance" element={<FacultyEditAttendance />} />
+    <Route path="enter-marks" element={<FacultyEnterMarks />} />
+    <Route path="attendance-report" element={<FacultyAttendanceReport />} />
+    <Route path="marks-report" element={<FacultyMarksReport />} />
+    
+    <Route path="profile" element={<FacultyProfile />} />
+</Route>
+
+                {/* ===================== Student ===================== */}
+                <Route
+                    path="/student"
+                    element={
+                        <ProtectedRoute allowedRole="student">
+                            <StudentLayout />
+                        </ProtectedRoute>
+                    }
+                >
+                    <Route path="dashboard" element={<StudentDashboard />} />
+                    <Route path="profile" element={<StudentProfile />} />
+                    <Route path="attendance" element={<StudentAttendance />} />
+                    <Route path="marksheet" element={<StudentMarksheet />} />
+
+
+                </Route>
+
+                {/* Catch All */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+
+            </Routes>
+        </Router>
+    );
+}
+
+export default App;

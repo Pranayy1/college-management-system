@@ -1,0 +1,106 @@
+{
+  "name": "college-management-system",
+  "private": true,
+  "version": "2.1.0-alpha",
+  "description": "A cross-platform college management system for managing courses, students, faculty, attendance, marks, and academic records.",
+  "author": "Ayusman Avisek Nanda",
+  "homepage": "https://github.com/AyusmanNanda/College_Management_system",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AyusmanNanda/College_Management_system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AyusmanNanda/College_Management_system/issues"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "main": "electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "dist": "ELECTRON=true vite build && electron-builder",
+    "dist:win": "ELECTRON=true vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/browser": "^8.0.2",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
+    "@react-oauth/google": "^0.13.4",
+    "axios": "^1.18.1",
+    "dotenv": "^17.3.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.575.0",
+    "pg": "^8.22.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.18.3",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.2.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-basic-ssl": "^2.1.4",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.24",
+    "concurrently": "^9.2.4",
+    "electron": "^41.10.3",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.2.0",
+    "vite": "^7.3.6",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "icon": "electron/icon.png",
+    "directories": {
+      "output": "release/installers"
+    },
+    "appId": "com.college.cms",
+    "productName": "College Management System",
+    "files": [
+      "release/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": "AppImage",
+      "category": "Education"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "electron/icon.ico"
+    },
+    "protocols": {
+      "name": "CMS OAuth",
+      "schemes": [
+        "cms"
+      ]
+    }
+  },
+  "allowScripts": {
+    "electron@41.1.0": true,
+    "esbuild@0.27.3": true,
+    "sharp@0.32.6": true,
+    "electron-winstaller@5.4.0": true,
+    "core-js": false
+  }
+}

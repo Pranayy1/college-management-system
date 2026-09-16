@@ -1,0 +1,85 @@
+# =========================
+# Node modules (both backend & frontend)
+# =========================
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# =========================
+# Logs
+# =========================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# =========================
+# Environment variables
+# =========================
+.env
+frontend/.env
+backend/.env
+.env.production
+frontend/.env.production
+
+# =========================
+# Build folders
+# =========================
+dist/
+build/
+dev-dist/
+frontend/dist/
+backend/dist/
+
+# =========================
+# Vite cache
+# =========================
+.vite/
+
+# =========================
+# PWA / service worker
+# =========================
+workbox-*
+sw.js
+
+# =========================
+# Uploads (user generated)
+# =========================
+uploads/*
+!uploads/.gitkeep
+
+# =========================
+# Android / Capacitor builds
+# =========================
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# =========================
+# Electron builds
+# =========================
+release/
+dist-electron/
+
+# =========================
+# Coverage
+# =========================
+coverage/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE files
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp

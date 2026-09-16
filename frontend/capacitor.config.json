@@ -1,0 +1,8 @@
+{
+  "appId": "com.college.cms",
+  "appName": "CMS",
+  "webDir": "dist",
+  "android": {
+    "fullscreen": true
+  }
+}

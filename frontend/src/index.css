@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@page {
+    size: A4;
+    margin: 0;
+}
+
+@media print {
+
+    body * {
+        visibility: hidden;
+    }
+
+    #marksheet, #marksheet * {
+        visibility: visible;
+    }
+
+    #marksheet {
+        position: fixed;
+        top: 0;
+        left: 0;
+    }
+
+}
+
+/* Hide scrollbar (mobile + desktop safe) */
+html, body {
+    overflow-x: hidden;
+}
+
+/* Hide scrollbar everywhere */
+* {
+    scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
+}
