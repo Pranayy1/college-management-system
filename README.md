@@ -1,191 +1,228 @@
 <p align="center">
-  <img src="screenshots/gcekjr.png" width="72" style="border-radius: 50%;" alt="GCE Keonjhar logo" />
+  <h1 align="center">College Management System</h1>
 </p>
 
-<h1 align="center">Axiom</h1>
-<p align="center"><i>College Management System</i></p>
-<p align="center"><sub>The Government College of Engineering, Keonjhar name and logo/crest are trademarks of GCE Keonjhar, used here for attribution only, not covered by this project's license, see <a href="./LICENSE">LICENSE</a>.</sub></p>
+<p align="center">
+  <i>A web-based platform for managing students, faculty, courses, attendance, marks, and academic records.</i>
+</p>
 
 <p align="center">
-  <a href="https://github.com/AyusmanNanda/College_Management_system/actions/workflows/build.yml">
-    <img src="https://github.com/AyusmanNanda/College_Management_system/actions/workflows/build.yml/badge.svg" alt="Build status" />
+  <a href="https://github.com/Pranayy1/college-management-system">
+    <img src="https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white" alt="GitHub Repository" />
   </a>
-  <a href="https://cmsnet.vercel.app">
-    <img src="https://img.shields.io/badge/demo-live-2E4374" alt="Live demo" />
-  </a>
+  <img src="https://img.shields.io/badge/Project-Major%20Project-4169E1" alt="Major Project" />
+  <img src="https://img.shields.io/badge/Semester-7th-2E4374" alt="7th Semester" />
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React" />
   <img src="https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/Android-Capacitor-3DDC84?logo=android&logoColor=white" alt="Android" />
-  <img src="https://img.shields.io/badge/Desktop-Electron-47848F?logo=electron&logoColor=white" alt="Electron" />
-  <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/AyusmanNanda/college-management-system?color=lightgrey" alt="License" />
-  </a>
 </p>
 
 <p align="center">
-  <b><a href="https://cmsnet.vercel.app">Live Demo →</a></b>
+  <b>Live Demo: Coming Soon</b>
 </p>
-
-<p align="center">
-  <a href="#overview">Overview</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#running-locally">Setup</a> ·
-  <a href="#team">Team</a>
-</p>
-
-> Built as a 6th-semester B.Tech project for Government College of Engineering, Keonjhar. It's finished and not under active feature development, though we check in occasionally to merge Dependabot updates and review issues.
 
 ---
 
 ## Overview
 
-Most colleges we've seen still run attendance and marks through paper registers and spreadsheets passed around over email. Axiom tries to replace that with a single system that Admins, Faculty, and Students all log into, each seeing only what's relevant to their role.
+**College Management System** is a web-based application designed to centralize and simplify common academic and administrative activities within a college.
 
-It supports three roles today (Admin, Faculty, and Student), with role-based access enforced on every API route, not just hidden in the UI. On top of the core attendance/marks/course-management flow, it also generates cryptographically verifiable marksheets: each one carries a SHA-256 hash of the underlying data and a QR code that links to a public verification page, so a printed marksheet can be checked for tampering.
+The system provides role-based access for **Admin, Faculty, and Students**, allowing each role to access the functionality relevant to them. It includes modules for student and faculty management, courses and subjects, attendance, marks, reports, and marksheet generation and verification.
 
-Axiom ships from a single codebase to four platforms: a web app, an installable PWA, a native Android app (via Capacitor), and a desktop app (via Electron).
+This project is being developed as an **individual B.Tech CSE major project during the 7th semester** at **Vindhya Institute of Technology and Science (V.I.T.S.), Satna**.
 
-The project has three parts:
-
-| Part | Location | Responsibility |
-|---|---|---|
-| Backend API | `backend/src/` | Express REST API, controllers, routes, JWT/role middleware, Postgres access |
-| Frontend | `frontend/src/` | React + Vite SPA, Admin, Faculty, and Student dashboards |
-| Database | `sql/schema.sql` | PostgreSQL schema (hosted on Supabase) |
+> **Project status:** The project is actively being developed and refined. Minor bugs and issues present in the existing implementation have been fixed as part of the current development work. Further customization and improvements are planned.
 
 ---
 
-## System Flow
+## Project Objectives
 
-```mermaid
-flowchart LR
-    A[Web / PWA] --> D[Vercel]
-    B[Android App] --> D
-    C[Electron Desktop] --> D
-    D --> E[Render, Express API]
-    E --> F[Supabase, PostgreSQL]
-```
+The primary objectives of the project are:
 
-A keep-alive ping hits the Render backend every 5 minutes to avoid cold starts on the free tier.
+- Build a centralized platform for college academic management.
+- Reduce dependency on manual records and spreadsheets.
+- Provide separate workflows for Admin, Faculty, and Students.
+- Simplify student, faculty, course, attendance, and marks management.
+- Provide role-based access to protect academic information.
+- Generate structured academic reports and marksheets.
+- Provide a foundation that can be further customized according to institutional requirements.
 
 ---
 
 ## Features
 
-<details>
-<summary>Admin Portal</summary>
+### Admin Portal
 
 | Feature | Description |
 |---|---|
-| Dashboard | College-wide stats, total students, faculty, and courses |
+| Dashboard | View college-wide statistics and academic information |
 | Student Management | Add, view, edit, and delete student records |
-| Faculty Management | Manage faculty accounts, qualifications, and subject assignments |
-| Import Students / Faculty via Excel | Bulk-create accounts from `.xlsx`, with a downloadable template |
-| Import Marks via Excel | Bulk upload marks per subject via a pre-filled template |
-| Course & Subject Management | Semester- or year-based courses, with theory/practical max marks per subject |
-| Assign Subjects | Map subjects to faculty per course and semester |
-| Attendance & Marks Entry/Edit | Record and correct attendance and marks |
-| Reports | Subject-wise attendance and marks analytics |
-| Print Marksheet | Generate a verified A4 marksheet with QR code, watermark, and signature |
-| Admin Profile | Manage college name, logo, contact details, and signature |
+| Faculty Management | Manage faculty accounts and subject assignments |
+| Import Students / Faculty | Bulk-create accounts using Excel templates |
+| Import Marks | Upload marks using Excel-based templates |
+| Course & Subject Management | Manage courses, semesters, years, and subjects |
+| Assign Subjects | Assign subjects to faculty members |
+| Attendance Management | View and manage attendance records |
+| Marks Management | View and manage academic marks |
+| Reports | Access attendance and marks analytics |
+| Marksheet | Generate academic marksheets |
+| Profile Management | Manage institution-related profile information |
 
-</details>
-
-<details>
-<summary>Faculty Portal</summary>
+### Faculty Portal
 
 | Feature | Description |
 |---|---|
-| Dashboard | Overview of students, faculty, and subjects |
-| Take / Edit Attendance | Restricted to today's date, enforced server-side |
-| Enter Marks | Internal marks for assigned subjects |
-| Reports | Attendance and marks analytics for assigned classes |
-| Faculty Profile | View and update personal profile and photo |
+| Dashboard | Overview of assigned academic information |
+| Attendance | Take and edit attendance for assigned classes |
+| Marks | Enter and manage marks for assigned subjects |
+| Reports | View attendance and marks-related reports |
+| Faculty Profile | View and update personal profile information |
 
-</details>
-
-<details>
-<summary>Student Portal</summary>
+### Student Portal
 
 | Feature | Description |
 |---|---|
-| Dashboard | Name, roll number, course, and semester |
-| Attendance Tracker | Subject-wise attendance with percentage |
-| Marksheet | Internal marks, theory, practical, and total |
-| Student Profile | Update password and date of birth |
+| Dashboard | View personal academic information |
+| Attendance Tracker | View subject-wise attendance and percentage |
+| Marks | View internal, theory, practical, and total marks |
+| Marksheet | Access academic marksheet information |
+| Profile | Manage available personal account information |
 
-</details>
+---
 
-<details>
-<summary>Role & Access Matrix</summary>
+## Role & Access
 
 | Feature | Student | Faculty | Admin |
-|---|---|---|---|
+|---|:---:|:---:|:---:|
 | View own attendance | ✅ | ✅ | ✅ |
-| Take / edit attendance | ❌ | ✅ today only | ✅ |
+| Take / edit attendance | ❌ | ✅ | ✅ |
 | View own marks | ✅ | ✅ | ✅ |
 | Enter / edit marks | ❌ | ✅ | ✅ |
 | Import marks via Excel | ❌ | ❌ | ✅ |
-| Print marksheet | ✅ | ❌ | ✅ |
-| Verify marksheet via QR | ✅ | ✅ | ✅ |
+| Print / generate marksheet | ✅ | ❌ | ✅ |
+| Verify marksheet | ✅ | ✅ | ✅ |
 | Manage students / faculty | ❌ | ❌ | ✅ |
-| Import students / faculty via Excel | ❌ | ❌ | ✅ |
+| Import students / faculty | ❌ | ❌ | ✅ |
 | Manage courses & subjects | ❌ | ❌ | ✅ |
-| Manage college profile | ❌ | ❌ | ✅ |
-
-</details>
+| Manage institution profile | ❌ | ❌ | ✅ |
 
 ---
 
 ## Marksheet Verification
 
+The project includes a marksheet generation and verification workflow.
+
 ```mermaid
 flowchart TD
-    A[Generate Marksheet] --> B[SHA-256 hash of marks data]
-    B --> C[QR code → /verify/marksheet/:code]
-    C --> D[Watermark + SVG seal + signature]
-    D --> E[Printed Marksheet]
-    E --> F[Scan QR]
-    F --> G[Verification page: name, roll no, course, hash, issuer]
+    A[Generate Marksheet] --> B[Generate Hash of Academic Data]
+    B --> C[Generate QR Code]
+    C --> D[Generated Marksheet]
+    D --> E[Scan QR Code]
+    E --> F[Verification Page]
+    F --> G[Compare Academic Information]
 ```
+
+The existing implementation uses a **SHA-256 hash** and QR-based verification mechanism to provide a way to verify generated marksheet information.
 
 ---
 
 ## Authentication & Security
 
+The application includes several mechanisms for controlling access and protecting application data:
+
 | Feature | Description |
 |---|---|
-| Email + Password | JWT-based login with bcrypt password hashing |
-| Google OAuth | Handled separately for web, Android, and Electron |
-| Role-based Access Control | Middleware-enforced on every API route |
-| Faculty Attendance Restriction | Faculty can only submit attendance for today, enforced server-side |
-| SHA-256 + QR Marksheet Verification | See above |
-| Offline Detection | PWA-aware, detects a stale cache with an unreachable backend |
-| Dark / Light Mode | System-preference aware, persisted locally |
+| Email + Password | JWT-based authentication with bcrypt password hashing |
+| Google OAuth | OAuth-based authentication support |
+| Role-Based Access Control | Access is controlled according to user roles |
+| Attendance Restriction | Faculty attendance operations are restricted according to the application's rules |
+| SHA-256 Marksheet Verification | Academic data can be associated with a cryptographic hash |
+| QR Verification | QR codes provide access to the marksheet verification workflow |
+| Offline Detection | PWA-aware detection for connectivity/backend availability |
+| Dark / Light Mode | User interface supports dark and light themes |
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    A[Web / PWA] --> D[Frontend]
+    B[Android App] --> D
+    C[Desktop App] --> D
+    D --> E[Express REST API]
+    E --> F[PostgreSQL / Supabase]
+```
+
+The project is organized into three primary layers:
+
+| Part | Responsibility |
+|---|---|
+| Frontend | React + Vite application and role-based dashboards |
+| Backend | Express REST API, authentication, authorization, controllers and routes |
+| Database | PostgreSQL database for application and academic data |
+
+---
+
+## Tech Stack
+
+### Frontend
+- React 19
+- React Router
+- Vite
+- Tailwind CSS
+
+### Backend
+- Node.js
+- Express.js
+
+### Database
+- PostgreSQL
+- Supabase
+
+### Authentication
+- JWT
+- bcrypt
+- Google OAuth 2.0
+
+### Cross-Platform
+- Capacitor
+- Electron
+
+### Academic Documents
+- QR Code generation
+- Web Crypto API / SHA-256
+- jsPDF
+- html2canvas
+
+### Excel
+- SheetJS
+- ExcelJS
 
 ---
 
 ## Screenshots
 
+> Screenshots will be updated as the project UI is customized and finalized.
+
 <details>
 <summary>Click to expand</summary>
 
-| Login (Light) | Login (Dark) |
-|---|---|
-| ![Login Light](./screenshots/login-light.png) | ![Login Dark](./screenshots/login-dark.png) |
+### Login
 
-| Admin (Light) | Admin (Dark) |
-|---|---|
-| ![Admin Light](./screenshots/admin-light.png) | ![Admin Dark](./screenshots/admin-dark.png) |
+Add login screenshots here.
 
-| Faculty (Light) | Faculty (Dark) |
-|---|---|
-| ![Faculty Light](./screenshots/faculty-light.png) | ![Faculty Dark](./screenshots/faculty-dark.png) |
+### Admin Dashboard
 
-| Student (Light) | Student (Dark) |
-|---|---|
-| ![Student Light](./screenshots/student-light.png) | ![Student Dark](./screenshots/student-dark.png) |
+Add admin dashboard screenshots here.
+
+### Faculty Dashboard
+
+Add faculty dashboard screenshots here.
+
+### Student Dashboard
+
+Add student dashboard screenshots here.
 
 </details>
 
@@ -193,99 +230,121 @@ flowchart TD
 
 ## Running Locally
 
-```bash
-# clone
-git clone https://github.com/AyusmanNanda/college-management-system.git
-cd college-management-system
+### 1. Clone the repository
 
-# backend
+```bash
+git clone https://github.com/Pranayy1/college-management-system.git
+cd college-management-system
+```
+
+### 2. Setup the backend
+
+```bash
 cd backend
 npm install
-cp .env.example .env
-npm run dev
-
-# frontend
-cd ../frontend
-npm install
-cp .env.example .env
-npm run dev
 ```
 
-Open `http://localhost:5173`.
+Create the required `.env` file based on the environment variables used by the project.
 
-Default admin login is in `.env.example`, change it immediately after first login.
-
-<details>
-<summary>Android / Electron builds</summary>
+Then start the backend:
 
 ```bash
-# Android
-cd frontend
-npm run build
-npx cap sync android
-npx cap open android
-
-# Electron desktop
-cd frontend
-npm run build
-npm run electron
+npm run dev
 ```
 
-</details>
+### 3. Setup the frontend
+
+Open another terminal:
+
+```bash
+cd frontend
+npm install
+```
+
+Configure the required frontend environment variables and start the development server:
+
+```bash
+npm run dev
+```
+
+The frontend is typically available at:
+
+```text
+http://localhost:5173
+```
+
+> Environment variables and credentials should never be committed to the repository.
+
+---
+
+## Project Status
+
+The project is currently under active development as a **B.Tech CSE 7th-semester major project**.
+
+Current work includes:
+
+- Fixing minor bugs and issues in the existing implementation.
+- Reviewing existing functionality.
+- Improving reliability and usability.
+- Customizing the project according to academic requirements.
+- Planning further feature and UI improvements.
+
+A public live demo will be made available in the future with appropriate demonstration credentials.
 
 ---
 
 ## Limitations
 
-- Built and tested against a single college's course/semester structure, assumptions about the academic calendar are baked in rather than fully configurable
-- No automated test suite, changes were verified manually
-- Currently supports three roles (Admin, Faculty, Student) only
-- This project is not under active feature development; issues and PRs may take a while to get a response
+- The current implementation is based on an existing college management system and is being progressively customized.
+- Some academic workflows may require further configuration for different institutional structures.
+- The application is still under development.
+- Automated test coverage may need to be expanded.
+- Some modules may be refined as project requirements evolve.
 
 ---
 
-## Contributing
+## Attribution & Project Basis
 
-This repo isn't under active feature development, so response times on issues or PRs will be slow. Feel free to fork it if you want to take it further.
+This project is an **academic adaptation and further development of an existing open-source College Management System**.
 
----
+The original project that served as the starting point is:
 
-## Tech Stack
+**Original Repository:**  
+https://github.com/AyusmanNanda/college-management-system
 
-**Frontend:** React 19, React Router v7, Vite 7, TailwindCSS 4
-**Backend:** Node.js, Express 5
-**Database:** PostgreSQL (Supabase)
-**Auth:** JWT, bcrypt, Google OAuth 2.0
-**Android:** Capacitor 8
-**Desktop:** Electron 41, electron-builder
-**Marksheet:** QRCode.react, Web Crypto API (SHA-256), jsPDF, html2canvas
-**Excel:** SheetJS, ExcelJS
-**Hosting:** Vercel (frontend), Render (backend), Supabase (database)
+The current repository contains the ongoing work, bug fixes, customization, and further development carried out for the academic major project.
+
+The original project's applicable license and attribution requirements are retained in this repository.
 
 ---
 
-## Team
+## Academic Information
 
-Built as a B.Tech (CSE) project at Government College of Engineering, Keonjhar.
-
-| Name | Role |
+| Field | Details |
 |---|---|
-| Ayusman Avisek Nanda | Team Member |
-| Muna Samal | Team Member |
-| Dibyasmita Mohapatra | Team Member |
-| Debasish Kar | Team Member |
-| Lipika Pati | Team Member |
+| Project | College Management System |
+| Project Type | B.Tech CSE Major Project |
+| Semester | 7th Semester |
+| Institution | Vindhya Institute of Technology and Science (V.I.T.S.), Satna |
+| Developer | Pranay Pandey |
+| Team | Individual Project |
+| Academic Year | 2026–27 |
 
-**Project Guide:** Prof. Santosh Kumar Meher
-**Department:** Computer Science & Engineering
-**Program:** B.Tech, 3rd Year, 6th Semester (2025–26)
+---
+
+## Repository
+
+**Current Repository:**  
+https://github.com/Pranayy1/college-management-system
 
 ---
 
 ## License
 
-MIT, see [LICENSE](./LICENSE).
+This project retains the license applicable to the original project. See [`LICENSE`](./LICENSE) for the complete license text.
 
 ---
 
-⭐ If this project is useful to you, consider starring it.
+<p align="center">
+  <i>Developed and customized as an individual B.Tech CSE major project.</i>
+</p>
