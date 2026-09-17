@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="screenshots/vits.jpg" width="72" style="border-radius: 50%;" alt="VITS logo" />
+</p>
+
+<p align="center">
   <h1 align="center">College Management System</h1>
 </p>
 
