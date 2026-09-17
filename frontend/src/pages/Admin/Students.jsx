@@ -80,7 +80,12 @@ const Students = () => {
 
     useEffect(() => {
         window.addEventListener("focus", fetchStudents);
-        return () => window.removeEventListener("focus", fetchStudents);
+        const refreshInterval = window.setInterval(fetchStudents, 60000); //Refresh every 60 seconds for checking active status of students
+
+        return () => {
+            window.removeEventListener("focus", fetchStudents);
+            window.clearInterval(refreshInterval);
+        };
     }, []);
 
     /* ================= DELETE ================= */
