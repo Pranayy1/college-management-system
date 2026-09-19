@@ -365,9 +365,9 @@ exports.updateFaculty = async (req, res) => {
                                  experience = $8,
                                  birthdate = $9,
                                  gender = $10,
-                                 courcecode = $11,
-                                 semoryear = $12,
-                                 subject = $13,
+                                 courcecode = COALESCE($11, courcecode),
+                                 semoryear = COALESCE($12, semoryear),
+                                 subject = COALESCE($13, subject),
                                  position = $14,
                                  joineddate = $15,
                                  profilepic = $16
@@ -384,9 +384,9 @@ exports.updateFaculty = async (req, res) => {
             experience.trim(),
             birthdate,
             gender,
-            courcecode || "NOT ASSIGNED",
-            semoryear || 0,
-            subject || "NOT ASSIGNED",
+            courcecode ?? null,
+            semoryear ?? null,
+            subject ?? null,
             position || "NOT ASSIGNED",
             joineddate || null,
             finalProfilePic
@@ -1389,22 +1389,21 @@ exports.getAssignedSubjects = async (req, res) => {
             });
         }
 
-        const result = await db.query(
-            `SELECT
-                f.subject AS subjectcode,
+                const result = await db.query(
+                        `SELECT
+                                a.subjectcode,
                 s.subjectname,
                 s.theorymarks,
                 s.practicalmarks,
-                f.courcecode,
-                f.semoryear
+                                a.courcecode,
+                                a.semoryear
              FROM faculties f
-             LEFT JOIN subject s
-               ON f.subject = s.subjectcode
-             WHERE (f.emailid = $1)
-               AND f.subject IS NOT NULL
-               AND f.subject <> ''
-               AND f.subject <> 'NOT ASSIGNED'
-             LIMIT 1`,
+                         INNER JOIN faculty_subject_assignments a
+                             ON a.faculty_sr_no = f.sr_no
+                         LEFT JOIN subject s
+                             ON a.subjectcode = s.subjectcode
+                         WHERE f.emailid = $1
+                         ORDER BY a.courcecode, a.semoryear, a.subjectcode`,
             [email]
         );
 

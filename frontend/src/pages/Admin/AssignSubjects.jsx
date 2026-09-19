@@ -71,16 +71,10 @@ const AssignSubjects = () => {
     const fetchFaculties = async () => {
         try {
             const res = await api.get("/api/assign/faculties", {
+                params: { course_code: selectedCourse, sem: selectedSem },
                 headers: { Authorization: `Bearer ${token}` }
             });
-
-            const filtered = (res.data || []).filter(
-                (f) =>
-                    f.courcecode === "NOT ASSIGNED" ||
-                    f.courcecode === selectedCourse
-            );
-
-            setFaculties(filtered);
+            setFaculties(res.data || []);
         } catch {
             setError("Failed to load faculties.");
         }
@@ -136,18 +130,20 @@ const AssignSubjects = () => {
 
     /* ================= UNASSIGN ================= */
 
-    const handleUnassign = async (facultyId) => {
+    const handleUnassign = async (faculty) => {
         try {
             setLoading(true);
 
-            await api.put(
-                `/api/assign/${facultyId}`,
+            await api.delete(
+                `/api/assign/${faculty.sr_no}`,
                 {
-                    subjectcode: "NOT ASSIGNED",
-                    courcecode: "NOT ASSIGNED",
-                    semoryear: 0
+                    data: {
+                        subjectcode: faculty.assignment_subjectcode,
+                        courcecode: faculty.assignment_courcecode,
+                        semoryear: faculty.assignment_semoryear
+                    },
+                    headers: { Authorization: `Bearer ${token}` }
                 },
-                { headers: { Authorization: `Bearer ${token}` } }
             );
 
             setToast({ type: "success", message: "Subject unassigned successfully!" });
@@ -286,7 +282,7 @@ const AssignSubjects = () => {
                                     </tr>
                                 ) : (
                                     faculties.map((faculty, idx) => {
-                                        const isAssigned = faculty.subject !== "NOT ASSIGNED";
+                                        const isAssigned = Boolean(faculty.assignment_subjectcode);
                                         return (
                                             <tr key={faculty.sr_no} className={`${idx % 2 === 0 ? 'bg-transparent' : 'bg-slate-50/50 dark:bg-slate-800/20'} hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-colors`}>
                                                 <td className="w-[35%] sm:w-[25%] px-4 sm:px-6 py-4">
@@ -299,9 +295,9 @@ const AssignSubjects = () => {
                                                     {isAssigned ? (
                                                         <div className="inline-flex flex-col items-start">
                                                                 <span className="px-2 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 rounded border border-emerald-200 dark:border-emerald-500/20 truncate max-w-full" title={faculty.subjectname}>
-                                                                    {faculty.subjectname || faculty.subject}
+                                                                    {faculty.subjectname || faculty.assignment_subjectcode}
                                                                 </span>
-                                                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono mt-1 px-1">{faculty.subject}</span>
+                                                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono mt-1 px-1">{faculty.assignment_subjectcode}</span>
                                                         </div>
                                                     ) : (
                                                         <span className="px-2 py-1 text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded uppercase tracking-wider border border-slate-200 dark:border-slate-700">
@@ -321,7 +317,7 @@ const AssignSubjects = () => {
 
                                                         {isAssigned && (
                                                             <button
-                                                                onClick={() => handleUnassign(faculty.sr_no)}
+                                                                onClick={() => handleUnassign(faculty)}
                                                                 disabled={loading}
                                                                 className="w-full max-w-[100px] flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg text-[10px] sm:text-xs font-bold hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-70 active:scale-95"
                                                             >

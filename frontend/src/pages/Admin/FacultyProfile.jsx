@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Eye, EyeOff, UserCircle, Camera, X } from "lucide-react";
 import api from "../../utils/api";
 import ConfirmSaveModal from "../../components/modals/ConfirmSaveModal.jsx";
@@ -10,9 +10,6 @@ const FacultyProfile = ({ faculty, onClose, onUpdated }) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    const [courses, setCourses] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-    const [semOptions, setSemOptions] = useState([]);
     const [selectedFile, setSelectedFile] = useState(null);
     const [error, setError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -29,71 +26,12 @@ const FacultyProfile = ({ faculty, onClose, onUpdated }) => {
         experience: faculty?.experience || "",
         birthdate: faculty?.birthdate || "",
         gender: faculty?.gender || "",
-        courcecode: faculty?.courcecode || "NOT ASSIGNED",
-        semoryear: faculty?.semoryear || "",
-        subject: faculty?.subject || "NOT ASSIGNED",
         position: faculty?.position || "NOT ASSIGNED",
         joineddate: faculty?.joineddate || today,
         password: ""
     });
 
     /* ================= Logic Preservation ================= */
-    useEffect(() => {
-        const fetchCourses = async () => {
-            try {
-                const res = await api.get(
-                    "/api/courses",
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                setCourses(res.data || []);
-            } catch (err) {
-                console.error(err);
-            }
-        };
-        fetchCourses();
-    }, []);
-
-    useEffect(() => {
-        const selectedCourse = courses.find(
-            (c) => c.course_code === form.courcecode
-        );
-
-        if (selectedCourse) {
-            const options = [];
-            for (let i = 1; i <= selectedCourse.total_semesters; i++) {
-                options.push(i);
-            }
-            setSemOptions(options);
-        } else {
-            setSemOptions([]);
-        }
-
-        setForm((prev) => ({
-            ...prev,
-            semoryear: "",
-            subject: "NOT ASSIGNED"
-        }));
-
-        setSubjects([]);
-    }, [form.courcecode, courses]);
-
-    useEffect(() => {
-        if (form.courcecode !== "NOT ASSIGNED" && form.semoryear) {
-            const fetchSubjects = async () => {
-                try {
-                    const res = await api.get(
-                        `/api/subjects?course_code=${form.courcecode}&sem=${form.semoryear}`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    setSubjects(res.data || []);
-                } catch (err) {
-                    console.error(err);
-                }
-            };
-            fetchSubjects();
-        }
-    }, [form.courcecode, form.semoryear]);
-
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm({ ...form, [name]: value });
@@ -235,56 +173,6 @@ const FacultyProfile = ({ faculty, onClose, onUpdated }) => {
                         <Input required type="date" label="Birth Date" name="birthdate" value={form.birthdate} onChange={handleChange} />
 
                         <Select required label="Gender" name="gender" value={form.gender} onChange={handleChange} options={genderOptions} />
-
-                        {/* Course */}
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs text-gray-500 dark:text-gray-400">
-                                Course
-                            </label>
-                            <select
-                                name="courcecode"
-                                value={form.courcecode}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 rounded-md text-sm outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
-                            >
-                                <option value="NOT ASSIGNED">NOT ASSIGNED</option>
-                                {courses.map((c) => (
-                                    <option key={c.course_code} value={c.course_code}>
-                                        {c.course_code} - {c.course_name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Semester / Year */}
-                        <Select
-                            label="Semester / Year"
-                            name="semoryear"
-                            value={form.semoryear}
-                            onChange={handleChange}
-                            options={["", ...semOptions]}
-                        />
-
-                        {/* Subject */}
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs text-gray-500 dark:text-gray-400">
-                                Subject
-                            </label>
-                            <select
-                                name="subject"
-                                value={form.subject}
-                                onChange={handleChange}
-                                disabled={!form.semoryear}
-                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 rounded-md text-sm outline-none focus:ring-1 focus:ring-indigo-500 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-900 opacity-70 disabled:opacity-50"
-                            >
-                                <option value="NOT ASSIGNED">NOT ASSIGNED</option>
-                                {subjects.map((s) => (
-                                    <option key={s.subjectcode} value={s.subjectcode}>
-                                        {s.subjectcode} - {s.subjectname}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
 
                         <Select label="Position" name="position" value={form.position} onChange={handleChange} options={positionOptions} />
                         <Input type="date" label="Joined Date" name="joineddate" value={form.joineddate} onChange={handleChange} />
