@@ -22,7 +22,6 @@ export default function FacultyEnterMarks() {
   const [marks, setMarks] = useState({});
   const [selectedSubject, setSelectedSubject] = useState("");
   const [loadingSubjects, setLoadingSubjects] = useState(true);
-  const [loadingStudents, setLoadingStudents] = useState(false);
   const [error, setError] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -35,7 +34,7 @@ export default function FacultyEnterMarks() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAssignedSubjects(res.data || []);
-      } catch (err) {
+      } catch {
         setError("Failed to load assigned subjects.");
       } finally {
         setLoadingSubjects(false);
@@ -61,7 +60,6 @@ export default function FacultyEnterMarks() {
     }
     const fetchStudents = async () => {
       try {
-        setLoadingStudents(true);
         const res = await api.get(
           `/api/marks/students?course=${selectedCourse}&sem=${selectedSem}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -72,10 +70,8 @@ export default function FacultyEnterMarks() {
           initialMarks[student.rollnumber] = { theory: "", practical: "" };
         });
         setMarks(initialMarks);
-      } catch (err) {
+      } catch {
         setError("Failed to load students.");
-      } finally {
-        setLoadingStudents(false);
       }
     };
     fetchStudents();
@@ -93,6 +89,58 @@ export default function FacultyEnterMarks() {
     setStudents([]);
     setMarks({});
     setError("");
+  };
+
+  const handleOpenSaveModal = () => {
+    if (!selectedSubjectObj) return;
+
+    for (const student of students) {
+      if ((marks[student.rollnumber]?.theory ?? "") === "") {
+        setError(`Enter theory marks for ${student.firstname} ${student.lastname}.`);
+        return;
+      }
+
+      if (
+        Number(selectedSubjectObj.practicalmarks || 0) > 0 &&
+        (marks[student.rollnumber]?.practical ?? "") === ""
+      ) {
+        setError(`Enter practical marks for ${student.firstname} ${student.lastname}.`);
+        return;
+      }
+    }
+
+    setError("");
+    setShowSaveModal(true);
+  };
+
+  const saveMarks = async () => {
+    try {
+      const subjectHasPractical = Number(selectedSubjectObj?.practicalmarks || 0) > 0;
+      const records = students.map((student) => ({
+        rollnumber: student.rollnumber,
+        theorymarks: marks[student.rollnumber]?.theory || 0,
+        practicalmarks: subjectHasPractical
+          ? marks[student.rollnumber]?.practical || 0
+          : 0,
+      }));
+
+      await api.post(
+        "/api/marks/save",
+        {
+          course: selectedCourse,
+          sem: Number(selectedSem),
+          subject: selectedSubject,
+          subjectname: selectedSubjectObj?.subjectname,
+          marks: records,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setShowSaveModal(false);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save marks.");
+    }
   };
 
   const isReady = selectedSubject && selectedCourse && selectedSem;
@@ -243,7 +291,7 @@ export default function FacultyEnterMarks() {
               Active logging for {students.length} students
             </div>
             <button 
-              onClick={() => setShowSaveModal(true)}
+              onClick={handleOpenSaveModal}
               className="w-full sm:w-auto px-10 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
             >
               <Save className="w-4 h-4" /> Save Marks
@@ -253,7 +301,14 @@ export default function FacultyEnterMarks() {
       )}
 
       {/* MODALS */}
-      <ConfirmSaveModal show={showSaveModal} onCancel={() => setShowSaveModal(false)} onConfirm={() => setShowSaveModal(false)} />
+      <ConfirmSaveModal
+        show={showSaveModal}
+        title="Confirm Grade Submission"
+        message={`Are you sure you want to save scores for ${selectedSubjectObj?.subjectname}?`}
+        confirmText="Save Marks"
+        onCancel={() => setShowSaveModal(false)}
+        onConfirm={saveMarks}
+      />
       {showImportModal && (
         <ImportMarksModal 
           token={token} 
