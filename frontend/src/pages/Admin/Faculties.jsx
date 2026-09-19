@@ -116,7 +116,9 @@ const Faculties = () => {
 
         const matchesCourse =
             !courseFilter ||
-            faculty?.courcecode === courseFilter;
+            faculty?.assignments?.some(
+                (assignment) => assignment.courcecode === courseFilter
+            );
 
         return matchesSearch && matchesStatus && matchesCourse;
     });
@@ -262,14 +264,21 @@ const Faculties = () => {
                                         </td>
 
                                         <td className="hidden lg:table-cell lg:w-[20%] px-4 py-3">
-                                            {faculty.courcecode !== "NOT ASSIGNED" ? (
-                                                <div className="flex flex-col">
-                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
-                                                            {faculty.courcecode} • Sem {faculty.semoryear}
-                                                        </span>
-                                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate" title={faculty.subject_name}>
-                                                            {faculty.subject}
-                                                        </span>
+                                            {faculty.assignments?.length ? (
+                                                <div className="flex flex-col gap-1.5">
+                                                    {faculty.assignments.map((assignment) => (
+                                                        <div key={`${assignment.courcecode}-${assignment.semoryear}-${assignment.subjectcode}`}>
+                                                            <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                                                                {assignment.courcecode} • Sem {assignment.semoryear}
+                                                            </span>
+                                                            <span
+                                                                className="block text-[10px] text-slate-500 dark:text-slate-400 truncate"
+                                                                title={assignment.subjectname || assignment.subjectcode}
+                                                            >
+                                                                {assignment.subjectname || assignment.subjectcode}
+                                                            </span>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             ) : (
                                                 <span className="px-2 py-1 text-[9px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 rounded uppercase tracking-wider">

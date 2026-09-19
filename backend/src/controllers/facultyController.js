@@ -243,6 +243,24 @@ exports.getFaculties = async (req, res) => {
                 f.semoryear,
                 f.subject,
                 COALESCE(s.subjectname, NULL) AS subject_name,
+                COALESCE((
+                    SELECT json_agg(
+                        json_build_object(
+                            'subjectcode', a.subjectcode,
+                            'subjectname', assigned_subject.subjectname,
+                            'courcecode', a.courcecode,
+                            'course_name', assigned_course.course_name,
+                            'semoryear', a.semoryear
+                        )
+                        ORDER BY a.courcecode, a.semoryear, a.subjectcode
+                    )
+                    FROM faculty_subject_assignments a
+                    LEFT JOIN subject assigned_subject
+                        ON assigned_subject.subjectcode = a.subjectcode
+                    LEFT JOIN courses assigned_course
+                        ON assigned_course.course_code = a.courcecode
+                    WHERE a.faculty_sr_no = f.sr_no
+                ), '[]'::json) AS assignments,
                 f.position,
                 TO_CHAR(f.joineddate, 'YYYY-MM-DD') AS joineddate,
                 f.activestatus,
