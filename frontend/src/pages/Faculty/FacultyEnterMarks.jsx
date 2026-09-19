@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../utils/api";
 import ConfirmSaveModal from "../../components/modals/ConfirmSaveModal";
 import ImportMarksModal from "./ImportMarksModal";
+import Alert from "../../components/ui/Alert";
 import { 
   ListChecks, 
   Save, 
@@ -11,7 +12,6 @@ import {
   ClipboardCheck,
   Calendar,
   Layers,
-  AlertCircle
 } from "lucide-react";
 
 export default function FacultyEnterMarks() {
@@ -23,6 +23,8 @@ export default function FacultyEnterMarks() {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [savingMarks, setSavingMarks] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
@@ -89,6 +91,7 @@ export default function FacultyEnterMarks() {
     setStudents([]);
     setMarks({});
     setError("");
+    setSuccess("");
   };
 
   const handleOpenSaveModal = () => {
@@ -110,11 +113,13 @@ export default function FacultyEnterMarks() {
     }
 
     setError("");
+    setSuccess("");
     setShowSaveModal(true);
   };
 
   const saveMarks = async () => {
     try {
+      setSavingMarks(true);
       const subjectHasPractical = Number(selectedSubjectObj?.practicalmarks || 0) > 0;
       const records = students.map((student) => ({
         rollnumber: student.rollnumber,
@@ -138,8 +143,11 @@ export default function FacultyEnterMarks() {
 
       setShowSaveModal(false);
       setError("");
+      setSuccess("Marks saved successfully.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save marks.");
+    } finally {
+      setSavingMarks(false);
     }
   };
 
@@ -180,12 +188,8 @@ export default function FacultyEnterMarks() {
       {/* Main Content - Added extra bottom padding (pb-32) to account for the fixed footer */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 pb-32">
         
-        {error && (
-          <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-900/20 rounded-xl text-red-600 dark:text-red-400 text-sm font-semibold">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p>{error}</p>
-          </div>
-        )}
+        {error && <Alert variant="error">{error}</Alert>}
+        {success && <Alert variant="success">{success}</Alert>}
 
         {/* DROPDOWN CARD */}
         <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-5 transition-colors">
@@ -308,6 +312,7 @@ export default function FacultyEnterMarks() {
         confirmText="Save Marks"
         onCancel={() => setShowSaveModal(false)}
         onConfirm={saveMarks}
+        loading={savingMarks}
       />
       {showImportModal && (
         <ImportMarksModal 
