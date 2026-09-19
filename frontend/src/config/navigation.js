@@ -6,6 +6,7 @@ import {
     GraduationCap,
     BarChart3,
     User,
+    Receipt,
 } from "lucide-react";
 
 export const adminNavigation = [
@@ -21,6 +22,7 @@ export const adminNavigation = [
             { name: "Courses", path: "/admin/courses" },
             { name: "Subjects", path: "/admin/subjects" },
             { name: "Assign Subjects", path: "/admin/assign-subjects" },
+            { name: "Assign Fees", path: "/admin/assign-fees" },
         ],
     },
     {
@@ -40,7 +42,7 @@ export const adminNavigation = [
         ],
     },
     {
-        name: "Marks",
+        name: "MST Marks",
         icon: GraduationCap,
         children: [
             { name: "Enter Marks", path: "/admin/enter-marks" },
@@ -52,8 +54,9 @@ export const adminNavigation = [
         icon: BarChart3,
         children: [
             { name: "Attendance Report", path: "/admin/attendance-report" },
-            { name: "Marks Report", path: "/admin/marks-report" },
-            { name: "Print Marksheet", path: "/admin/print-marksheet" },
+            { name: "MST Marks Report", path: "/admin/marks-report" },
+            { name: "Fees Report", path: "/admin/fees-report" },
+            { name: "Print Internal Marksheet", path: "/admin/print-marksheet" },
         ],
     },
     {
@@ -80,7 +83,7 @@ export const facultyNavigation = [
         ],
     },
     {
-        name: "Marks",
+        name: "MST Marks",
         icon: GraduationCap,
         children: [
             { name: "Enter Marks", path: "/faculty/enter-marks" },
@@ -91,7 +94,8 @@ export const facultyNavigation = [
         icon: BarChart3,
         children: [
             { name: "Attendance Report", path: "/faculty/attendance-report" },
-            { name: "Marks Report", path: "/faculty/marks-report" },
+            { name: "MST Marks Report", path: "/faculty/marks-report" },
+            { name: "Fees Report", path: "/faculty/fees-report" },
         ],
     },
     {
@@ -115,9 +119,14 @@ export const studentNavigation = [
         path: "/student/attendance",
     },
     {
-        name: "Marksheet",
+        name: "MST Marksheet",
         icon: GraduationCap,
         path: "/student/marksheet",
+    },
+    {
+        name: "Fees",
+        icon: Receipt,
+        path: "/student/fees",
     },
     {
         name: "Account",

@@ -18,6 +18,7 @@ import AdminProfile from "./pages/Admin/AdminProfile";
 import Courses from "./pages/Admin/Courses";
 import Subjects from "./pages/Admin/Subjects";
 import AssignSubjects from "./pages/Admin/AssignSubjects";
+import AssignFees from "./pages/Admin/AssignFees";
 import Faculties from "./pages/Admin/Faculties.jsx";
 import Students from "./pages/Admin/Students.jsx";
 import TakeAttendance from "./pages/Admin/TakeAttendance";
@@ -27,6 +28,7 @@ import EnterMarks from "./pages/Admin/EnterMarks";
 import EditMarks from "./pages/Admin/EditMarks";
 import MarksReport from "./pages/Admin/MarksReport";
 import PrintMarksheet from "./pages/Admin/PrintMarksheet";
+import FeeStructureReport from "./pages/Fees/FeeStructureReport";
 
 import FacultyDashboard from "./pages/Faculty/FacultyDashboard";
 import FacultyLayout from "./pages/Faculty/FacultyLayout.jsx";
@@ -42,6 +44,7 @@ import StudentLayout from "./pages/Student/StudentLayout.jsx"
 import StudentProfile from "./pages/Student/StudentProfile";
 import StudentAttendance from "./pages/Student/StudentAttendance";
 import StudentMarksheet from "./pages/Student/StudentMarksheet";
+import StudentFees from "./pages/Student/StudentFees";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -131,6 +134,7 @@ function App() {
                     <Route path="courses" element={<Courses />} />
                     <Route path="subjects" element={<Subjects />} />
                     <Route path="assign-subjects" element={<AssignSubjects />} />
+                    <Route path="assign-fees" element={<AssignFees />} />
                     <Route path="faculties" element={<Faculties />} />
                     <Route path="students" element={<Students />} />
                     <Route path="take-attendance" element={<TakeAttendance />} />
@@ -139,6 +143,7 @@ function App() {
                     <Route path="enter-marks" element={<EnterMarks />} />
                     <Route path="edit-marks" element={<EditMarks />} />
                     <Route path="marks-report" element={<MarksReport />} />
+                    <Route path="fees-report" element={<FeeStructureReport role="admin" />} />
                     <Route path="print-marksheet" element={<PrintMarksheet />} />
                 </Route>
 
@@ -157,6 +162,7 @@ function App() {
     <Route path="enter-marks" element={<FacultyEnterMarks />} />
     <Route path="attendance-report" element={<FacultyAttendanceReport />} />
     <Route path="marks-report" element={<FacultyMarksReport />} />
+    <Route path="fees-report" element={<FeeStructureReport role="faculty" />} />
     
     <Route path="profile" element={<FacultyProfile />} />
 </Route>
@@ -174,6 +180,7 @@ function App() {
                     <Route path="profile" element={<StudentProfile />} />
                     <Route path="attendance" element={<StudentAttendance />} />
                     <Route path="marksheet" element={<StudentMarksheet />} />
+                    <Route path="fees" element={<StudentFees />} />
 
 
                 </Route>
