@@ -7,6 +7,8 @@ const FeeStructureReport = ({ role }) => {
     const [courses, setCourses] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState("");
     const [selectedTerm, setSelectedTerm] = useState("");
+    const [reportData, setReportData] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
@@ -23,8 +25,36 @@ const FeeStructureReport = ({ role }) => {
     const reset = () => {
         setSelectedCourse("");
         setSelectedTerm("");
+        setReportData([]);
         setError("");
     };
+
+    useEffect(() => {
+        if (!selectedCourse || !selectedTerm || !token) {
+            setReportData([]);
+            return;
+        }
+        const fetchReport = async () => {
+            try {
+                setLoading(true);
+                const response = await api.get(`/api/fees/report?course=${selectedCourse}&sem=${selectedTerm}`, { headers: { Authorization: `Bearer ${token}` } });
+                setReportData(response.data || []);
+                setError("");
+            } catch (err) {
+                setReportData([]);
+                setError(err.response?.data?.message || "Failed to load fee report.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchReport();
+    }, [selectedCourse, selectedTerm, token]);
+
+    const totals = reportData.reduce((summary, item) => ({
+        total: summary.total + Number(item.total_amount || 0),
+        paid: summary.paid + Number(item.paid_amount || 0),
+        remaining: summary.remaining + Number(item.remaining_amount || 0)
+    }), { total: 0, paid: 0, remaining: 0 });
 
     return (
         <div className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
@@ -43,7 +73,12 @@ const FeeStructureReport = ({ role }) => {
                         <select value={selectedTerm} disabled={!selectedCourse} onChange={(event) => setSelectedTerm(event.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm disabled:opacity-40 outline-none focus:ring-2 focus:ring-indigo-500/20"><option value="">Select {termLabel}...</option>{termOptions.map((term) => <option key={term} value={term}>{termLabel} {term}</option>)}</select>
                     </div>
                 </section>
-                <section className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center"><BarChart3 className="w-10 h-10 mx-auto text-indigo-500 mb-4" /><h2 className="text-lg font-bold">{selectedCourse && selectedTerm ? `${course.course_name} · ${termLabel} ${selectedTerm}` : "Select a course and term"}</h2><p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">The fee structure report is ready for this selection. Fee amounts will appear here when fee data is connected.</p></section>
+                {loading ? <div className="p-16 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl"><div className="w-8 h-8 mx-auto border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" /></div> : selectedCourse && selectedTerm ? <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {[{ label: "Assigned", value: totals.total }, { label: "Paid", value: totals.paid }, { label: "Remaining", value: totals.remaining }].map((item) => <div key={item.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm"><p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{item.label} fees</p><p className="text-2xl font-black mt-2">₹{item.value.toFixed(2)}</p></div>)}
+                    </div>
+                    <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden"><div className="p-5 border-b border-slate-200 dark:border-slate-800"><h2 className="text-sm font-bold">{course.course_name} · {termLabel} {selectedTerm}</h2></div>{reportData.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">No fee assignments found for this class.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[650px]"><thead className="bg-slate-50 dark:bg-slate-950/50"><tr><th className="px-5 py-3 text-left text-[10px] uppercase text-slate-500">Student</th><th className="px-5 py-3 text-center text-[10px] uppercase text-slate-500">Assigned</th><th className="px-5 py-3 text-center text-[10px] uppercase text-slate-500">Paid</th><th className="px-5 py-3 text-center text-[10px] uppercase text-slate-500">Remaining</th><th className="px-5 py-3 text-center text-[10px] uppercase text-slate-500">Last payment</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-slate-800">{reportData.map((item) => <tr key={item.fee_account_id}><td className="px-5 py-4"><p className="text-sm font-bold">{item.firstname} {item.lastname}</p><p className="text-xs text-slate-500 font-mono">{item.rollnumber}</p></td><td className="px-5 py-4 text-center text-sm">₹{Number(item.total_amount).toFixed(2)}</td><td className="px-5 py-4 text-center text-sm text-emerald-600">₹{Number(item.paid_amount).toFixed(2)}</td><td className="px-5 py-4 text-center text-sm font-bold text-amber-600">₹{Number(item.remaining_amount).toFixed(2)}</td><td className="px-5 py-4 text-center text-xs text-slate-500">{item.last_paid_at ? new Date(item.last_paid_at).toLocaleDateString() : "Not paid"}</td></tr>)}</tbody></table></div>}</section>
+                </> : <section className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center"><BarChart3 className="w-10 h-10 mx-auto text-indigo-500 mb-4" /><h2 className="text-lg font-bold">Select a course and term</h2><p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">Choose the course and semester/year to view assigned, paid, and remaining fees.</p></section>}
             </main>
         </div>
     );

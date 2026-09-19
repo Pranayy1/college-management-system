@@ -23,6 +23,7 @@ const AssignFees = () => {
     const [selectedStudent, setSelectedStudent] = useState("");
     const [amount, setAmount] = useState("");
     const [loadingStudents, setLoadingStudents] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [toast, setToast] = useState(null);
 
@@ -58,6 +59,7 @@ const AssignFees = () => {
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 setStudents(response.data || []);
+                await loadAssignments(selectedCourse, selectedSem);
                 setSelectedStudent("");
                 setError("");
             } catch {
@@ -74,6 +76,16 @@ const AssignFees = () => {
     const getStudentKey = (student) => String(student.student_id || student.id || student.rollnumber);
     const getStudentName = (student) => student.name || `${student.firstname || ""} ${student.lastname || ""}`.trim() || "Unnamed student";
 
+    const loadAssignments = async (courseCode, term) => {
+        const response = await api.get(`/api/fees/report?course=${courseCode}&sem=${term}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setAssignments((response.data || []).reduce((result, item) => ({
+            ...result,
+            [String(item.student_id)]: { amount: Number(item.total_amount), course: courseCode, sem: term }
+        }), {}));
+    };
+
     const handleReset = () => {
         setSelectedCourse("");
         setSelectedSem("");
@@ -84,7 +96,7 @@ const AssignFees = () => {
         setError("");
     };
 
-    const handleAssign = (event) => {
+    const handleAssign = async (event) => {
         event.preventDefault();
         const numericAmount = Number(amount);
 
@@ -105,21 +117,25 @@ const AssignFees = () => {
             ? students
             : students.filter((student) => getStudentKey(student) === selectedStudent);
 
-        setAssignments((previous) => targetStudents.reduce((next, student) => ({
-            ...next,
-            [getStudentKey(student)]: {
+        try {
+            setSaving(true);
+            const response = await api.post("/api/fees/assign", {
+                course_code: selectedCourse,
+                semoryear: Number(selectedSem),
                 amount: numericAmount,
-                course: selectedCourse,
-                sem: selectedSem
-            }
-        }), previous));
-        setError("");
-        setToast({
-            type: "success",
-            message: assignmentMode === "class"
-                ? `Fees assigned to ${targetStudents.length} student${targetStudents.length === 1 ? "" : "s"}.`
-                : "Individual fees assigned successfully."
-        });
+                mode: assignmentMode,
+                student_id: assignmentMode === "individual" ? Number(selectedStudent) : undefined
+            }, { headers: { Authorization: `Bearer ${token}` } });
+            await loadAssignments(selectedCourse, selectedSem);
+            setError("");
+            setToast({ type: "success", message: response.data.message });
+        } catch (err) {
+            const message = err.response?.data?.message || "Failed to assign fees.";
+            setError(message);
+            setToast({ type: "error", message });
+        } finally {
+            setSaving(false);
+        }
     };
 
     const visibleAssignments = students.filter((student) => assignments[getStudentKey(student)]);
@@ -172,7 +188,7 @@ const AssignFees = () => {
 
                             <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                                 <label className="w-full sm:max-w-xs"><span className="block text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-1.5">Fee Amount</span><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span><input type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter amount" className="w-full pl-8 pr-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" /></div></label>
-                                <button type="submit" disabled={loadingStudents || students.length === 0} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 disabled:opacity-50"><Save className="w-4 h-4" /> Assign Fees</button>
+                                <button type="submit" disabled={loadingStudents || saving || students.length === 0} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 disabled:opacity-50"><Save className="w-4 h-4" /> {saving ? "Saving..." : "Assign Fees"}</button>
                             </div>
                         </form>
                     </section>
