@@ -5,6 +5,7 @@ const feeController = require("../controllers/feeController");
 const feePaymentMethodController = require("../controllers/feePaymentMethodController");
 const feePaymentRequestController = require("../controllers/feePaymentRequestController");
 const feePaymentVerificationController = require("../controllers/feePaymentVerificationController");
+const feeCreditController = require("../controllers/feeCreditController");
 const authMiddleware = require("../middleware/authMiddleware");
 const roleAuth = require("../middleware/roleAuthMiddleware");
 
@@ -40,6 +41,18 @@ router.post(
 	authMiddleware,
 	roleAuth(["student"]),
 	feePaymentRequestController.createPaymentRequest
+);
+router.get(
+	"/credit-balance",
+	authMiddleware,
+	roleAuth(["student"]),
+	feeCreditController.getCreditBalance
+);
+router.post(
+	"/credit-apply",
+	authMiddleware,
+	roleAuth(["student"]),
+	feeCreditController.applyCredit
 );
 router.get(
 	"/payment-requests",

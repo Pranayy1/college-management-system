@@ -173,4 +173,143 @@ const recordVerifiedPayment = async (client, {
     };
 };
 
-module.exports = { recordVerifiedPayment };
+const getStudentCreditBalance = async (client, studentId) => {
+    if (!client || typeof client.query !== "function") {
+        throw createServiceError("A transaction client is required", 500, "INVALID_TRANSACTION_CLIENT");
+    }
+
+    const normalizedStudentId = Number(studentId);
+    if (!Number.isInteger(normalizedStudentId) || normalizedStudentId <= 0) {
+        throw createServiceError("A valid student is required");
+    }
+
+    const result = await client.query(
+        `SELECT COALESCE(SUM(CASE WHEN entry_type = 'CREDIT_CREATED' THEN amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN entry_type = 'CREDIT_APPLIED' THEN amount ELSE 0 END), 0)
+                AS available_credit
+         FROM fee_credit_ledger
+         WHERE student_id = $1`,
+        [normalizedStudentId]
+    );
+
+    return Math.max(Number(result.rows[0]?.available_credit || 0), 0);
+};
+
+const applyStudentCredit = async (client, {
+    studentId,
+    feeAccountId,
+    amount,
+    reason
+}) => {
+    if (!client || typeof client.query !== "function") {
+        throw createServiceError("A transaction client is required", 500, "INVALID_TRANSACTION_CLIENT");
+    }
+
+    const normalizedStudentId = Number(studentId);
+    const normalizedAccountId = Number(feeAccountId);
+    const requestedAmount = Number(amount);
+    const normalizedReason = typeof reason === "string" ? reason.trim() : "";
+
+    if (!Number.isInteger(normalizedStudentId) || normalizedStudentId <= 0) {
+        throw createServiceError("A valid student is required");
+    }
+    if (!Number.isInteger(normalizedAccountId) || normalizedAccountId <= 0) {
+        throw createServiceError("A valid fee account is required");
+    }
+    if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) {
+        throw createServiceError("Credit amount must be a positive whole number");
+    }
+    if (!normalizedReason || normalizedReason.length > 255) {
+        throw createServiceError("A reason between 1 and 255 characters is required");
+    }
+
+    const accountResult = await client.query(
+        `SELECT fee_account_id, student_id, total_amount
+         FROM fee_accounts
+         WHERE fee_account_id = $1
+         FOR UPDATE`,
+        [normalizedAccountId]
+    );
+    if (!accountResult.rowCount) {
+        throw createServiceError("Fee account not found", 404, "FEE_ACCOUNT_NOT_FOUND");
+    }
+
+    const account = accountResult.rows[0];
+    if (Number(account.student_id) !== normalizedStudentId) {
+        throw createServiceError("Fee account does not belong to this student", 404, "FEE_ACCOUNT_NOT_FOUND");
+    }
+
+    const studentResult = await client.query(
+        `SELECT sr_no
+         FROM students
+         WHERE sr_no = $1
+         FOR UPDATE`,
+        [normalizedStudentId]
+    );
+    if (!studentResult.rowCount) {
+        throw createServiceError("Student not found", 404, "STUDENT_NOT_FOUND");
+    }
+
+    const ledgerResult = await client.query(
+        `SELECT ledger_id, entry_type, amount
+         FROM fee_credit_ledger
+         WHERE student_id = $1
+         FOR UPDATE`,
+        [normalizedStudentId]
+    );
+    const availableCredit = ledgerResult.rows.reduce((balance, entry) => {
+        const entryAmount = Number(entry.amount);
+        return balance + (entry.entry_type === "CREDIT_CREATED" ? entryAmount : -entryAmount);
+    }, 0);
+
+    const appliedResult = await client.query(
+        `SELECT COALESCE(SUM(fee_applied_amount), 0) AS payment_applied_amount
+         FROM fee_payments
+         WHERE fee_account_id = $1`,
+        [normalizedAccountId]
+    );
+    const creditAppliedResult = await client.query(
+        `SELECT COALESCE(SUM(amount), 0) AS credit_applied_amount
+         FROM fee_credit_ledger
+         WHERE fee_account_id = $1
+           AND entry_type = 'CREDIT_APPLIED'`,
+        [normalizedAccountId]
+    );
+
+    const paymentAppliedAmount = Number(appliedResult.rows[0]?.payment_applied_amount || 0);
+    const creditAppliedAmount = Number(creditAppliedResult.rows[0]?.credit_applied_amount || 0);
+    const remainingAmount = Math.max(Number(account.total_amount) - paymentAppliedAmount - creditAppliedAmount, 0);
+
+    if (requestedAmount > availableCredit) {
+        throw createServiceError("Requested credit exceeds available student credit", 409, "INSUFFICIENT_STUDENT_CREDIT");
+    }
+    if (requestedAmount > remainingAmount) {
+        throw createServiceError("Requested credit exceeds the remaining fee", 409, "CREDIT_EXCEEDS_REMAINING_FEE");
+    }
+
+    const ledgerInsert = await client.query(
+        `INSERT INTO fee_credit_ledger (
+            student_id,
+            entry_type,
+            amount,
+            fee_account_id,
+            reason
+         )
+         VALUES ($1, 'CREDIT_APPLIED', $2, $3, $4)
+         RETURNING ledger_id, student_id, entry_type, amount, fee_account_id, reason, created_at`,
+        [normalizedStudentId, requestedAmount, normalizedAccountId, normalizedReason]
+    );
+
+    return {
+        application: ledgerInsert.rows[0],
+        appliedAmount: requestedAmount,
+        remainingAmount: remainingAmount - requestedAmount,
+        availableCredit: availableCredit - requestedAmount
+    };
+};
+
+module.exports = {
+    recordVerifiedPayment,
+    getStudentCreditBalance,
+    applyStudentCredit
+};

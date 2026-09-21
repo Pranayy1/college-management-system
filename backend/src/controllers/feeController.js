@@ -112,8 +112,18 @@ exports.getClassFees = async (req, res) => {
         const result = await db.query(
             `SELECT fa.fee_account_id, s.sr_no AS student_id, s.rollnumber, s.firstname, s.lastname,
                     fa.course_code, fa.semoryear, fa.total_amount,
-                    COALESCE(SUM(fp.fee_applied_amount), 0)::numeric(12, 2) AS paid_amount,
-                    GREATEST(fa.total_amount - COALESCE(SUM(fp.fee_applied_amount), 0), 0)::numeric(12, 2) AS remaining_amount,
+                                        (COALESCE(SUM(fp.fee_applied_amount), 0) + COALESCE((
+                                                SELECT SUM(fcl.amount)
+                                                FROM fee_credit_ledger fcl
+                                                WHERE fcl.fee_account_id = fa.fee_account_id
+                                                    AND fcl.entry_type = 'CREDIT_APPLIED'
+                                        ), 0))::numeric(12, 2) AS paid_amount,
+                                        GREATEST(fa.total_amount - COALESCE(SUM(fp.fee_applied_amount), 0) - COALESCE((
+                                                SELECT SUM(fcl.amount)
+                                                FROM fee_credit_ledger fcl
+                                                WHERE fcl.fee_account_id = fa.fee_account_id
+                                                    AND fcl.entry_type = 'CREDIT_APPLIED'
+                                        ), 0), 0)::numeric(12, 2) AS remaining_amount,
                     MAX(fp.paid_at) AS last_paid_at
              FROM fee_accounts fa
              JOIN students s ON s.sr_no = fa.student_id
@@ -134,8 +144,18 @@ exports.getStudentFees = async (req, res) => {
     try {
         const accounts = await db.query(
             `SELECT fa.fee_account_id, fa.course_code, fa.semoryear, fa.total_amount,
-                    COALESCE(SUM(fp.fee_applied_amount), 0)::numeric(12, 2) AS paid_amount,
-                    GREATEST(fa.total_amount - COALESCE(SUM(fp.fee_applied_amount), 0), 0)::numeric(12, 2) AS remaining_amount
+                                        (COALESCE(SUM(fp.fee_applied_amount), 0) + COALESCE((
+                                                SELECT SUM(fcl.amount)
+                                                FROM fee_credit_ledger fcl
+                                                WHERE fcl.fee_account_id = fa.fee_account_id
+                                                    AND fcl.entry_type = 'CREDIT_APPLIED'
+                                        ), 0))::numeric(12, 2) AS paid_amount,
+                                        GREATEST(fa.total_amount - COALESCE(SUM(fp.fee_applied_amount), 0) - COALESCE((
+                                                SELECT SUM(fcl.amount)
+                                                FROM fee_credit_ledger fcl
+                                                WHERE fcl.fee_account_id = fa.fee_account_id
+                                                    AND fcl.entry_type = 'CREDIT_APPLIED'
+                                        ), 0), 0)::numeric(12, 2) AS remaining_amount
              FROM fee_accounts fa
              JOIN students s ON s.sr_no = fa.student_id
              LEFT JOIN fee_payments fp ON fp.fee_account_id = fa.fee_account_id
