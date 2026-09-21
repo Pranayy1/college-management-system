@@ -33,7 +33,7 @@ router.post(
 router.get(
 	"/payment-method",
 	authMiddleware,
-	roleAuth(["student"]),
+	roleAuth(["student", "admin"]),
 	feePaymentMethodController.getPaymentMethod
 );
 router.post(
