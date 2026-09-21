@@ -29,6 +29,7 @@ import EditMarks from "./pages/Admin/EditMarks";
 import MarksReport from "./pages/Admin/MarksReport";
 import PrintMarksheet from "./pages/Admin/PrintMarksheet";
 import FeeStructureReport from "./pages/Fees/FeeStructureReport";
+import FeePaymentVerification from "./pages/Admin/FeePaymentVerification";
 
 import FacultyDashboard from "./pages/Faculty/FacultyDashboard";
 import FacultyLayout from "./pages/Faculty/FacultyLayout.jsx";
@@ -144,6 +145,7 @@ function App() {
                     <Route path="edit-marks" element={<EditMarks />} />
                     <Route path="marks-report" element={<MarksReport />} />
                     <Route path="fees-report" element={<FeeStructureReport role="admin" />} />
+                    <Route path="payment-verification" element={<FeePaymentVerification />} />
                     <Route path="print-marksheet" element={<PrintMarksheet />} />
                 </Route>
 

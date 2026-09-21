@@ -56,6 +56,7 @@ export const adminNavigation = [
             { name: "Attendance Report", path: "/admin/attendance-report" },
             { name: "MST Marks Report", path: "/admin/marks-report" },
             { name: "Fees Report", path: "/admin/fees-report" },
+            { name: "Payment Verification", path: "/admin/payment-verification" },
             { name: "Print Internal Marksheet", path: "/admin/print-marksheet" },
         ],
     },
