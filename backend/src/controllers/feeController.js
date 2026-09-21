@@ -142,6 +142,13 @@ exports.getClassFees = async (req, res) => {
 
 exports.getStudentFees = async (req, res) => {
     try {
+        const studentResult = await db.query(
+            "SELECT sr_no FROM students WHERE emailid = $1",
+            [req.user.email]
+        );
+        if (!studentResult.rowCount) return res.status(404).json({ message: "Student not found" });
+
+        const studentId = studentResult.rows[0].sr_no;
         const accounts = await db.query(
             `SELECT fa.fee_account_id, fa.course_code, fa.semoryear, fa.total_amount,
                                         (COALESCE(SUM(fp.fee_applied_amount), 0) + COALESCE((
@@ -157,24 +164,55 @@ exports.getStudentFees = async (req, res) => {
                                                     AND fcl.entry_type = 'CREDIT_APPLIED'
                                         ), 0), 0)::numeric(12, 2) AS remaining_amount
              FROM fee_accounts fa
-             JOIN students s ON s.sr_no = fa.student_id
              LEFT JOIN fee_payments fp ON fp.fee_account_id = fa.fee_account_id
-             WHERE s.emailid = $1
+             WHERE fa.student_id = $1
              GROUP BY fa.fee_account_id
              ORDER BY fa.course_code, fa.semoryear`,
-            [req.user.email]
+            [studentId]
         );
         const payments = await db.query(
             `SELECT fp.payment_id, fp.fee_account_id, fp.amount, fp.paid_at, fp.note,
                     fa.course_code, fa.semoryear
              FROM fee_payments fp
              JOIN fee_accounts fa ON fa.fee_account_id = fp.fee_account_id
-             JOIN students s ON s.sr_no = fa.student_id
-             WHERE s.emailid = $1
+             WHERE fa.student_id = $1
              ORDER BY fp.paid_at DESC, fp.payment_id DESC`,
-            [req.user.email]
+            [studentId]
         );
-        res.json({ accounts: accounts.rows, payments: payments.rows });
+        const paymentRequests = await db.query(
+            `SELECT fpr.request_id, fpr.fee_account_id,
+                    fa.course_code, fa.semoryear, fpr.amount, fpr.utr,
+                    fpr.status, fpr.submitted_at, fpr.verified_at, fpr.rejected_at,
+                    fpr.rejection_reason_code, fpr.rejection_reason_text
+             FROM fee_payment_requests fpr
+             JOIN fee_accounts fa ON fa.fee_account_id = fpr.fee_account_id
+             WHERE fpr.student_id = $1
+             ORDER BY fpr.submitted_at DESC, fpr.request_id DESC`,
+            [studentId]
+        );
+        const creditHistory = await db.query(
+            `SELECT fcl.ledger_id, fcl.entry_type, fcl.amount,
+                    fcl.fee_payment_id, fcl.fee_account_id,
+                    COALESCE(account_fee.course_code, payment_fee.course_code) AS course_code,
+                    COALESCE(account_fee.semoryear, payment_fee.semoryear) AS semoryear,
+                    fcl.reason, fcl.created_at
+             FROM fee_credit_ledger fcl
+             LEFT JOIN fee_accounts account_fee
+                       ON account_fee.fee_account_id = fcl.fee_account_id
+             LEFT JOIN fee_payments fp
+                       ON fp.payment_id = fcl.fee_payment_id
+             LEFT JOIN fee_accounts payment_fee
+                       ON payment_fee.fee_account_id = fp.fee_account_id
+             WHERE fcl.student_id = $1
+             ORDER BY fcl.created_at DESC, fcl.ledger_id DESC`,
+            [studentId]
+        );
+        res.json({
+            accounts: accounts.rows,
+            payments: payments.rows,
+            payment_requests: paymentRequests.rows,
+            credit_history: creditHistory.rows
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Failed to load student fees" });
