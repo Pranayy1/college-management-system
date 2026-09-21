@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { recordVerifiedPayment } = require("../services/feeAccountingService");
 
 exports.assignFees = async (req, res) => {
     const { course_code: courseCode, semoryear, amount, mode = "class", student_id: studentId } = req.body;
@@ -52,8 +53,8 @@ exports.getClassFees = async (req, res) => {
         const result = await db.query(
             `SELECT fa.fee_account_id, s.sr_no AS student_id, s.rollnumber, s.firstname, s.lastname,
                     fa.course_code, fa.semoryear, fa.total_amount,
-                    COALESCE(SUM(fp.amount), 0)::numeric(12, 2) AS paid_amount,
-                    (fa.total_amount - COALESCE(SUM(fp.amount), 0))::numeric(12, 2) AS remaining_amount,
+                    COALESCE(SUM(fp.fee_applied_amount), 0)::numeric(12, 2) AS paid_amount,
+                    GREATEST(fa.total_amount - COALESCE(SUM(fp.fee_applied_amount), 0), 0)::numeric(12, 2) AS remaining_amount,
                     MAX(fp.paid_at) AS last_paid_at
              FROM fee_accounts fa
              JOIN students s ON s.sr_no = fa.student_id
@@ -74,8 +75,8 @@ exports.getStudentFees = async (req, res) => {
     try {
         const accounts = await db.query(
             `SELECT fa.fee_account_id, fa.course_code, fa.semoryear, fa.total_amount,
-                    COALESCE(SUM(fp.amount), 0)::numeric(12, 2) AS paid_amount,
-                    (fa.total_amount - COALESCE(SUM(fp.amount), 0))::numeric(12, 2) AS remaining_amount
+                    COALESCE(SUM(fp.fee_applied_amount), 0)::numeric(12, 2) AS paid_amount,
+                    GREATEST(fa.total_amount - COALESCE(SUM(fp.fee_applied_amount), 0), 0)::numeric(12, 2) AS remaining_amount
              FROM fee_accounts fa
              JOIN students s ON s.sr_no = fa.student_id
              LEFT JOIN fee_payments fp ON fp.fee_account_id = fa.fee_account_id
@@ -107,20 +108,36 @@ exports.recordPayment = async (req, res) => {
     if (!Number.isInteger(Number(accountId)) || !Number.isFinite(paymentAmount) || paymentAmount <= 0) {
         return res.status(400).json({ message: "Fee account and a positive payment amount are required" });
     }
+    let client;
+    let transactionStarted = false;
     try {
-        const account = await db.query("SELECT fee_account_id, total_amount FROM fee_accounts WHERE fee_account_id = $1", [Number(accountId)]);
-        if (!account.rowCount) return res.status(404).json({ message: "Fee account not found" });
-        const paid = await db.query("SELECT COALESCE(SUM(amount), 0) AS paid FROM fee_payments WHERE fee_account_id = $1", [Number(accountId)]);
-        if (paymentAmount > Number(account.rows[0].total_amount) - Number(paid.rows[0].paid)) return res.status(400).json({ message: "Payment cannot exceed remaining fees" });
-        const result = await db.query(
-            `INSERT INTO fee_payments (fee_account_id, amount, paid_at, recorded_by, note)
-             VALUES ($1, $2, COALESCE($3::timestamp, CURRENT_TIMESTAMP), $4, $5)
-             RETURNING payment_id, fee_account_id, amount, paid_at, note`,
-            [Number(accountId), paymentAmount, paidAt || null, req.user.email, note || null]
-        );
-        res.status(201).json(result.rows[0]);
+        client = await db.connect();
+        await client.query("BEGIN");
+        transactionStarted = true;
+
+        const result = await recordVerifiedPayment(client, {
+            feeAccountId: Number(accountId),
+            amount: paymentAmount,
+            source: "MANUAL",
+            paidAt,
+            recordedBy: req.user.email,
+            note: note || null
+        });
+
+        await client.query("COMMIT");
+        transactionStarted = false;
+        res.status(201).json({
+            ...result.payment,
+            fee_applied_amount: result.payment.fee_applied_amount,
+            credit_amount: result.payment.credit_amount,
+            remaining_amount: result.remainingAmount,
+            credit: result.credit
+        });
     } catch (error) {
+        if (client && transactionStarted) await client.query("ROLLBACK");
         console.error(error);
-        res.status(500).json({ message: "Failed to record payment" });
+        res.status(error.status || 500).json({ message: error.status ? error.message : "Failed to record payment" });
+    } finally {
+        if (client) client.release();
     }
 };
