@@ -5,6 +5,7 @@ exports.assignFees = async (req, res) => {
     const { course_code: courseCode, semoryear, amount, mode = "class", student_id: studentId } = req.body;
     const term = Number(semoryear);
     const feeAmount = Number(amount);
+    const adjustmentReason = typeof req.body.reason === "string" ? req.body.reason.trim() : "";
 
     if (!courseCode || !Number.isInteger(term) || term < 1 || !Number.isFinite(feeAmount) || feeAmount < 0) {
         return res.status(400).json({ message: "Course, semester/year, and a valid amount are required" });
@@ -14,35 +15,93 @@ exports.assignFees = async (req, res) => {
         return res.status(400).json({ message: "A student is required for individual assignment" });
     }
 
-    const client = await db.connect();
+    let client;
+    let transactionStarted = false;
     try {
+        client = await db.connect();
         await client.query("BEGIN");
+        transactionStarted = true;
         const students = mode === "class"
             ? await client.query("SELECT sr_no FROM students WHERE courcecode = $1 AND semoryear = $2", [courseCode, term])
             : await client.query("SELECT sr_no FROM students WHERE sr_no = $1 AND courcecode = $2 AND semoryear = $3", [Number(studentId), courseCode, term]);
 
         if (!students.rowCount) {
             await client.query("ROLLBACK");
+            transactionStarted = false;
             return res.status(404).json({ message: "No matching student found" });
         }
 
         for (const student of students.rows) {
+            const accountResult = await client.query(
+                `SELECT fee_account_id, total_amount
+                 FROM fee_accounts
+                 WHERE student_id = $1
+                   AND course_code = $2
+                   AND semoryear = $3
+                 FOR UPDATE`,
+                [student.sr_no, courseCode, term]
+            );
+
+            if (!accountResult.rowCount) {
+                await client.query(
+                    `INSERT INTO fee_accounts (student_id, course_code, semoryear, total_amount)
+                     VALUES ($1, $2, $3, $4)`,
+                    [student.sr_no, courseCode, term, feeAmount]
+                );
+                continue;
+            }
+
+            const account = accountResult.rows[0];
+            const currentTotal = Number(account.total_amount);
+            if (feeAmount === currentTotal) continue;
+
+            if (!adjustmentReason || adjustmentReason.length > 255) {
+                const error = new Error("A reason between 1 and 255 characters is required for fee adjustments");
+                error.status = 400;
+                throw error;
+            }
+
+            const appliedResult = await client.query(
+                `SELECT COALESCE(SUM(fee_applied_amount), 0) AS applied_amount
+                 FROM fee_payments
+                 WHERE fee_account_id = $1`,
+                [account.fee_account_id]
+            );
+            const appliedAmount = Number(appliedResult.rows[0].applied_amount);
+
+            if (feeAmount < appliedAmount) {
+                const error = new Error("New fee cannot be lower than the amount already paid/applied");
+                error.status = 409;
+                throw error;
+            }
+
             await client.query(
-                `INSERT INTO fee_accounts (student_id, course_code, semoryear, total_amount)
-                 VALUES ($1, $2, $3, $4)
-                 ON CONFLICT (student_id, course_code, semoryear)
-                 DO UPDATE SET total_amount = EXCLUDED.total_amount`,
-                [student.sr_no, courseCode, term, feeAmount]
+                `UPDATE fee_accounts
+                 SET total_amount = $1
+                 WHERE fee_account_id = $2`,
+                [feeAmount, account.fee_account_id]
+            );
+            await client.query(
+                `INSERT INTO fee_adjustments (
+                    fee_account_id,
+                    previous_total,
+                    new_total,
+                    reason,
+                    adjusted_by
+                 )
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [account.fee_account_id, currentTotal, feeAmount, adjustmentReason, req.user.email]
             );
         }
         await client.query("COMMIT");
+        transactionStarted = false;
         res.json({ message: "Fees assigned successfully", updated_students: students.rowCount });
     } catch (error) {
-        await client.query("ROLLBACK");
+        if (client && transactionStarted) await client.query("ROLLBACK");
         console.error(error);
-        res.status(500).json({ message: "Failed to assign fees" });
+        res.status(error.status || 500).json({ message: error.status ? error.message : "Failed to assign fees" });
     } finally {
-        client.release();
+        if (client) client.release();
     }
 };
 
