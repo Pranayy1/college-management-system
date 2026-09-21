@@ -3,6 +3,7 @@ const multer = require("multer");
 const router = express.Router();
 const feeController = require("../controllers/feeController");
 const feePaymentMethodController = require("../controllers/feePaymentMethodController");
+const feePaymentRequestController = require("../controllers/feePaymentRequestController");
 const authMiddleware = require("../middleware/authMiddleware");
 const roleAuth = require("../middleware/roleAuthMiddleware");
 
@@ -32,6 +33,12 @@ router.get(
 	authMiddleware,
 	roleAuth(["student"]),
 	feePaymentMethodController.getPaymentMethod
+);
+router.post(
+	"/payment-requests",
+	authMiddleware,
+	roleAuth(["student"]),
+	feePaymentRequestController.createPaymentRequest
 );
 router.get("/report", authMiddleware, roleAuth(["admin", "faculty"]), feeController.getClassFees);
 router.get("/student", authMiddleware, roleAuth(["student"]), feeController.getStudentFees);
