@@ -40,10 +40,13 @@ const StudentFees = () => {
     const [error, setError] = useState("");
     const [toast, setToast] = useState(null);
     const [selectedAccount, setSelectedAccount] = useState(null);
+    const [modalMode, setModalMode] = useState("payment");
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [methodError, setMethodError] = useState("");
     const [form, setForm] = useState({ amount: "", utr: "" });
     const [formError, setFormError] = useState("");
+    const [creditForm, setCreditForm] = useState({ amount: "", reason: "" });
+    const [creditFormError, setCreditFormError] = useState("");
 
     const loadFeeData = useCallback(async () => {
         const response = await api.get("/api/fees/student", {
@@ -78,9 +81,11 @@ const StudentFees = () => {
 
     const openPaymentModal = async account => {
         setSelectedAccount(account);
+        setModalMode("payment");
         setPaymentMethod(null);
         setMethodError("");
         setFormError("");
+        setCreditFormError("");
         setForm({ amount: "", utr: "" });
         setMethodLoading(true);
         try {
@@ -96,12 +101,25 @@ const StudentFees = () => {
         }
     };
 
-    const closePaymentModal = (force = false) => {
-        if (submitting && !force) return;
-        setSelectedAccount(null);
+    const openCreditModal = account => {
+        setSelectedAccount(account);
+        setModalMode("credit");
         setPaymentMethod(null);
         setMethodError("");
         setFormError("");
+        setCreditForm({ amount: "", reason: "" });
+        setCreditFormError("");
+    };
+
+    const closePaymentModal = (force = false) => {
+        if (submitting && !force) return;
+        setSelectedAccount(null);
+        setModalMode("payment");
+        setPaymentMethod(null);
+        setMethodError("");
+        setFormError("");
+        setCreditForm({ amount: "", reason: "" });
+        setCreditFormError("");
     };
 
     const submitPaymentRequest = async event => {
@@ -131,6 +149,51 @@ const StudentFees = () => {
             closePaymentModal(true);
         } catch (requestError) {
             setFormError(getErrorMessage(requestError, "Failed to submit payment request."));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const submitCreditApplication = async event => {
+        event.preventDefault();
+        const amount = Number(creditForm.amount);
+        const reason = creditForm.reason.trim();
+        const maximum = Math.min(availableCredit, Number(selectedAccount?.remaining_amount || 0));
+
+        if (!selectedAccount || availableCredit <= 0 || Number(selectedAccount.remaining_amount || 0) <= 0) {
+            setCreditFormError("Select an account with a remaining fee and available credit.");
+            return;
+        }
+        if (!Number.isInteger(amount) || amount <= 0) {
+            setCreditFormError("Enter a positive whole credit amount.");
+            return;
+        }
+        if (amount > maximum) {
+            setCreditFormError(`Enter an amount no greater than ${formatCurrency(maximum)}.`);
+            return;
+        }
+        if (!reason) {
+            setCreditFormError("Enter a reason for applying this credit.");
+            return;
+        }
+        if (reason.length > 255) {
+            setCreditFormError("The reason must be 255 characters or fewer.");
+            return;
+        }
+
+        setSubmitting(true);
+        setCreditFormError("");
+        try {
+            await api.post(
+                "/api/fees/credit-apply",
+                { fee_account_id: selectedAccount.fee_account_id, amount, reason },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            await loadFeeData();
+            setToast({ type: "success", message: "Fee credit applied successfully." });
+            closePaymentModal(true);
+        } catch (requestError) {
+            setCreditFormError(getErrorMessage(requestError, "Failed to apply fee credit."));
         } finally {
             setSubmitting(false);
         }
@@ -176,7 +239,10 @@ const StudentFees = () => {
                         {accounts.length === 0 ? <EmptyState text="No fee accounts available yet." /> : <div className="grid gap-3">{accounts.map(account => (
                             <div key={account.fee_account_id} className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                                 <div><p className="text-sm font-bold">{account.course_code} · {account.semoryear}</p><div className="grid grid-cols-3 gap-5 mt-3 text-xs"><Metric label="Total" value={formatCurrency(account.total_amount)} /><Metric label="Paid" value={formatCurrency(account.paid_amount)} /><Metric label="Remaining" value={formatCurrency(account.remaining_amount)} /></div></div>
-                                <button type="button" onClick={() => openPaymentModal(account)} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold"><CreditCard className="w-4 h-4" /> Pay fee</button>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <button type="button" onClick={() => openPaymentModal(account)} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold"><CreditCard className="w-4 h-4" /> Pay fee</button>
+                                    {availableCredit > 0 && Number(account.remaining_amount || 0) > 0 && <button type="button" onClick={() => openCreditModal(account)} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-sm font-bold"><CircleDollarSign className="w-4 h-4" /> Apply credit</button>}
+                                </div>
                             </div>
                         ))}</div>}
                     </Section>
@@ -196,9 +262,12 @@ const StudentFees = () => {
             </main>
 
             {selectedAccount && <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4" role="presentation" onMouseDown={event => event.target === event.currentTarget && closePaymentModal()}>
-                <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title">
-                    <div className="flex items-start justify-between gap-4"><div><h2 id="payment-dialog-title" className="text-lg font-black">Pay {selectedAccount.course_code} fees</h2><p className="text-xs text-slate-500 mt-1">Course payment destination</p></div><button type="button" onClick={closePaymentModal} disabled={submitting} aria-label="Close payment dialog" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><X className="w-5 h-5" /></button></div>
-                    {methodLoading ? <div className="py-12 flex justify-center"><Spinner /></div> : methodError ? <div className="mt-5 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-300 text-sm font-semibold">{methodError}</div> : <>
+                <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6" role="dialog" aria-modal="true" aria-labelledby="fee-dialog-title">
+                    <div className="flex items-start justify-between gap-4"><div><h2 id="fee-dialog-title" className="text-lg font-black">{modalMode === "credit" ? `Apply credit to ${selectedAccount.course_code}` : `Pay ${selectedAccount.course_code} fees`}</h2><p className="text-xs text-slate-500 mt-1">{modalMode === "credit" ? "Use available student credit" : "Course payment destination"}</p></div><button type="button" onClick={closePaymentModal} disabled={submitting} aria-label="Close fee dialog" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><X className="w-5 h-5" /></button></div>
+                    {modalMode === "credit" ? <>
+                        <div className="mt-5 grid grid-cols-2 gap-3 text-sm"><Metric label="Course" value={selectedAccount.course_code} /><Metric label="Semester/Year" value={selectedAccount.semoryear} /><Metric label="Total fee" value={formatCurrency(selectedAccount.total_amount)} /><Metric label="Current paid" value={formatCurrency(selectedAccount.paid_amount)} /><Metric label="Remaining" value={formatCurrency(selectedAccount.remaining_amount)} /><Metric label="Available credit" value={formatCurrency(Math.max(availableCredit, 0))} /></div>
+                        <form onSubmit={submitCreditApplication} className="mt-5 space-y-4"><div><label htmlFor="credit-amount" className="block text-sm font-bold mb-1.5">Amount to apply</label><input id="credit-amount" type="number" min="1" max={Math.min(availableCredit, Number(selectedAccount.remaining_amount || 0))} step="1" value={creditForm.amount} onChange={event => setCreditForm(current => ({ ...current, amount: event.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent" placeholder="2000" required /><p className="text-xs text-slate-500 mt-1">Maximum available: {formatCurrency(Math.min(availableCredit, Number(selectedAccount.remaining_amount || 0)))}</p></div><div><label htmlFor="credit-reason" className="block text-sm font-bold mb-1.5">Reason</label><textarea id="credit-reason" maxLength={255} rows="3" value={creditForm.reason} onChange={event => setCreditForm(current => ({ ...current, reason: event.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent resize-y" placeholder="Applied toward current fee" required /></div>{creditFormError && <p className="text-sm text-red-600 dark:text-red-300" role="alert">{creditFormError}</p>}<button type="submit" disabled={submitting || availableCredit <= 0 || Number(selectedAccount.remaining_amount || 0) <= 0} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-50">{submitting ? "Applying..." : "Apply credit"}</button></form>
+                    </> : methodLoading ? <div className="py-12 flex justify-center"><Spinner /></div> : methodError ? <div className="mt-5 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-300 text-sm font-semibold">{methodError}</div> : <>
                         <div className="mt-5 p-4 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/60 dark:bg-emerald-500/10"><p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Official college UPI ID</p><p className="mt-1 text-lg font-black">{paymentMethod?.upi_id || "Unavailable"}</p>{paymentMethod?.qr_url && <img src={paymentMethod.qr_url} alt={`Official ${selectedAccount.course_code} college payment QR code`} className="mt-4 mx-auto w-52 h-52 object-contain rounded-lg bg-white p-2" />} {paymentMethod?.qr_url && <a href={paymentMethod.qr_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">Open QR image <ExternalLink className="w-3 h-3" /></a>}</div>
                         <form onSubmit={submitPaymentRequest} className="mt-5 space-y-4"><div><label htmlFor="payment-amount" className="block text-sm font-bold mb-1.5">Amount paid</label><input id="payment-amount" type="number" min="100" step="100" value={form.amount} onChange={event => setForm(current => ({ ...current, amount: event.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent" placeholder="5000" required /></div><div><label htmlFor="payment-utr" className="block text-sm font-bold mb-1.5">UTR</label><input id="payment-utr" type="text" value={form.utr} onChange={event => setForm(current => ({ ...current, utr: event.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent" placeholder="Enter payment UTR" required /></div>{formError && <p className="text-sm text-red-600 dark:text-red-300" role="alert">{formError}</p>}<button type="submit" disabled={submitting || !paymentMethod?.upi_id} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-50">{submitting ? "Submitting..." : "Submit payment request"}</button></form>
                     </>}
