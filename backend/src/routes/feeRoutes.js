@@ -4,6 +4,7 @@ const router = express.Router();
 const feeController = require("../controllers/feeController");
 const feePaymentMethodController = require("../controllers/feePaymentMethodController");
 const feePaymentRequestController = require("../controllers/feePaymentRequestController");
+const feePaymentVerificationController = require("../controllers/feePaymentVerificationController");
 const authMiddleware = require("../middleware/authMiddleware");
 const roleAuth = require("../middleware/roleAuthMiddleware");
 
@@ -39,6 +40,30 @@ router.post(
 	authMiddleware,
 	roleAuth(["student"]),
 	feePaymentRequestController.createPaymentRequest
+);
+router.get(
+	"/payment-requests",
+	authMiddleware,
+	roleAuth(["admin"]),
+	feePaymentVerificationController.listPaymentRequests
+);
+router.get(
+	"/payment-requests/:requestId",
+	authMiddleware,
+	roleAuth(["admin"]),
+	feePaymentVerificationController.getPaymentRequest
+);
+router.post(
+	"/payment-requests/:requestId/verify",
+	authMiddleware,
+	roleAuth(["admin"]),
+	feePaymentVerificationController.verifyPaymentRequest
+);
+router.post(
+	"/payment-requests/:requestId/reject",
+	authMiddleware,
+	roleAuth(["admin"]),
+	feePaymentVerificationController.rejectPaymentRequest
 );
 router.get("/report", authMiddleware, roleAuth(["admin", "faculty"]), feeController.getClassFees);
 router.get("/student", authMiddleware, roleAuth(["student"]), feeController.getStudentFees);
