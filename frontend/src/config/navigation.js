@@ -23,6 +23,7 @@ export const adminNavigation = [
             { name: "Subjects", path: "/admin/subjects" },
             { name: "Assign Subjects", path: "/admin/assign-subjects" },
             { name: "Assign Fees", path: "/admin/assign-fees" },
+            { name: "Payment Methods", path: "/admin/payment-methods" },
         ],
     },
     {
