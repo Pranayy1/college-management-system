@@ -54,9 +54,9 @@ exports.listPaymentRequests = async (req, res) => {
     const conditions = [];
     const values = [];
     const addCondition = (condition, value) => {
-        values.push(value);
-        conditions.push(condition.replace("$VALUE", `$${values.length}`));
-    };
+    values.push(value);
+    conditions.push(condition.replaceAll("$VALUE", `$${values.length}`));
+};
 
     if (status !== "ALL") addCondition("fpr.status = $VALUE", status);
     if (search) {
