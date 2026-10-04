@@ -1,23 +1,11 @@
-const fs = require("fs");
-const path = require("path");
 const db = require("../config/db");
 const ExcelJS = require("exceljs");
 const XLSX = require("xlsx");
-
-const adminUploadDir = path.resolve(__dirname, "../../uploads/admin");
-
-const getAdminLogo = () => {
-    if (!fs.existsSync(adminUploadDir)) return "default.png";
-
-    const files = fs.readdirSync(adminUploadDir);
-
-    const match = files.find(file => {
-        const name = path.basename(file, path.extname(file));
-        return name === "admin";
-    });
-
-    return match || "default.png";
-};
+const { getSupabaseAdmin } = require("../config/supabase");
+const {
+    STUDENT_IMAGE_BUCKET,
+    getProfileImageUrl
+} = require("../services/profileImageStorage");
 
 // ============================
 // Get Students For Marks Entry
@@ -730,8 +718,11 @@ exports.getStudentMarksheet = async (req, res) => {
             ? adminRows[0].collagename
             : "College";
 
-        const logoFile = getAdminLogo();
-        const collegeLogo = `/uploads/admin/${logoFile}`;
+        const { data: logoData } = getSupabaseAdmin()
+            .storage
+            .from("admin-assets")
+            .getPublicUrl("admin/logo");
+        const collegeLogo = `${logoData.publicUrl}?v=${Date.now()}`;
 
         // ============================
         // Fetch Student Marks
@@ -777,9 +768,9 @@ exports.getStudentMarksheet = async (req, res) => {
 
         // Ensure profile pic exists
         rows.forEach(r => {
-            if (!r.profilepic) {
-                r.profilepic = "default.png";
-            }
+            r.profilepic =
+                getProfileImageUrl(STUDENT_IMAGE_BUCKET, r.profilepic) ||
+                "default.png";
         });
 
         // ============================

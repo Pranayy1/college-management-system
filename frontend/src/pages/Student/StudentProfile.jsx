@@ -15,6 +15,7 @@ import {
     Save
 } from "lucide-react";
 import api from "../../utils/api";
+import { resolveImageUrl } from "../../utils/imageUrl";
 import ConfirmSaveModal from "./modals/ConfirmSaveModal";
 import Toast from "../../components/ui/Toast.jsx";
 
@@ -81,7 +82,7 @@ const StudentProfile = () => {
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                         <div className="relative">
                             <img
-                                src={student?.profilepic ? `${BASE_URL}/uploads/students/${student.profilepic}` : `${BASE_URL}/uploads/students/default.png`}
+                                src={resolveImageUrl(student?.profilepic, "/uploads/students/default.png", BASE_URL)}
                                 alt="Student"
                                 className="h-28 w-28 object-cover rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
                             />
@@ -197,7 +198,7 @@ const EditStudentModal = ({ student, token, onClose }) => {
         rollnumber: student.rollnumber
     });
     const [file, setFile] = useState(null);
-    const [preview, setPreview] = useState(student.profilepic ? `${api.defaults.baseURL}/uploads/students/${student.profilepic}` : null);
+    const [preview, setPreview] = useState(resolveImageUrl(student.profilepic, "/uploads/students/default.png", api.defaults.baseURL));
     const [showPassword, setShowPassword] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
 

@@ -1,5 +1,6 @@
 import AppLayout from "../../components/layout/AppLayout";
 import { adminNavigation } from "../../config/navigation";
+import { resolveImageUrl } from "../../utils/imageUrl";
 
 const getAdminProfile = ({
                              user,
@@ -10,9 +11,11 @@ const getAdminProfile = ({
         : "N/A";
 
     return {
-        image: user?.logo
-            ? `${baseUrl}${user.logo}`
-            : `${baseUrl}/uploads/admin/default.png`,
+        image: resolveImageUrl(
+            user?.logo,
+            "/uploads/admin/default.png",
+            baseUrl
+        ),
         fallbackImage: `${baseUrl}/uploads/admin/default.png`,
         imageAlt: "Logo",
         title: "Administrator",

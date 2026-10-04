@@ -153,7 +153,7 @@ const Login = () => {
                     <div className={`inline-flex w-20 h-20 rounded-2xl shadow-lg shadow-indigo-500/20 mb-4 overflow-hidden border border-slate-200 dark:border-slate-800 ${useFallback ? "bg-indigo-600 p-5 items-center justify-center" : "bg-white"}`}>
                         {!useFallback ? (
                             <img
-                                src={`${BASE_URL}/uploads/admin/admin.jpg`}
+                                src={`${BASE_URL}/api/admin/logo`}
                                 alt="College Logo"
                                 className="w-full h-full object-cover"
                                 onError={() => setUseFallback(true)}

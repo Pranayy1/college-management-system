@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, UserCircle, Camera, X } from "lucide-react";
 import api from "../../utils/api";
+import { resolveImageUrl } from "../../utils/imageUrl";
 import ConfirmSaveModal from "../../components/modals/ConfirmSaveModal.jsx";
 
 const FacultyProfile = ({ faculty, onClose, onUpdated }) => {
@@ -147,7 +148,7 @@ const FacultyProfile = ({ faculty, onClose, onUpdated }) => {
                                 {selectedFile ? (
                                     <img src={URL.createObjectURL(selectedFile)} alt="preview" className="h-full w-full object-cover" />
                                 ) : faculty?.profilepic ? (
-                                    <img src={`${BASE_URL}/uploads/faculties/${faculty.profilepic}`} alt="profile" className="h-full w-full object-cover" />
+                                    <img src={resolveImageUrl(faculty.profilepic, "/uploads/faculties/default.png", BASE_URL)} alt="profile" className="h-full w-full object-cover" />
                                 ) : (
                                     <img src={`${BASE_URL}/uploads/faculties/default.png`} alt="default" className="h-full w-full object-cover" />
                                 )}

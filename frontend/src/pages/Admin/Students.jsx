@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
+import { resolveImageUrl } from "../../utils/imageUrl";
 import StudentProfile from "./StudentProfile";
 import ConfirmDeleteModal from "../../components/modals/ConfirmDeleteModal.jsx";
 import ImportStudentModal from "../../components/modals/ImportStudentModal.jsx";
@@ -249,7 +250,7 @@ const Students = () => {
                                     <tr key={student.sr_no} className={`${idx % 2 === 0 ? 'bg-transparent' : 'bg-slate-50/50 dark:bg-slate-800/20'} hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-colors`}>
                                         <td className="w-[15%] sm:w-[8%] px-2 sm:px-4 py-3 text-center">
                                             <img
-                                                src={student.profilepic ? `${BASE_URL}/uploads/students/${student.profilepic}` : `${BASE_URL}/uploads/students/default.png`}
+                                                src={resolveImageUrl(student.profilepic, "/uploads/students/default.png", BASE_URL)}
                                                 alt="profile"
                                                 className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-sm mx-auto"
                                             />

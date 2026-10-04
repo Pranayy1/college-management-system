@@ -1,5 +1,6 @@
 import { QRCodeCanvas } from "qrcode.react";
 import api from "../../utils/api";
+import { resolveImageUrl } from "../../utils/imageUrl";
 
 const MarksheetLayout = ({
                              marksheet,
@@ -32,11 +33,11 @@ const MarksheetLayout = ({
                 style={{ zIndex: 0 }}
             >
                 <img
-                    src={
-                        marksheet?.collegeLogo
-                            ? `${api.defaults.baseURL}${marksheet.collegeLogo}`
-                            : `${api.defaults.baseURL}/uploads/admin/default.png`
-                    }
+                    src={resolveImageUrl(
+                        marksheet?.collegeLogo,
+                        "/uploads/admin/default.png",
+                        api.defaults.baseURL
+                    )}
                     alt="watermark"
                     crossOrigin="anonymous"
                     style={{
@@ -58,11 +59,11 @@ const MarksheetLayout = ({
                         <div className="bg-white px-2 py-1 overflow-hidden">
 
                             <img
-                                src={
-                                    marksheet?.collegeLogo
-                                        ? `${api.defaults.baseURL}${marksheet.collegeLogo}`
-                                        : `${api.defaults.baseURL}/uploads/admin/default.png`
-                                }
+                                src={resolveImageUrl(
+                                    marksheet?.collegeLogo,
+                                    "/uploads/admin/default.png",
+                                    api.defaults.baseURL
+                                )}
                                 alt="college logo"
                                 className="object-contain block"
                                 style={{ height: "72px" }}
@@ -189,7 +190,11 @@ const MarksheetLayout = ({
                                 </svg>
 
                                 <img
-                                    src={`${api.defaults.baseURL}/uploads/students/${marksheet?.marks?.[0]?.profilepic}`}
+                                    src={resolveImageUrl(
+                                        marksheet?.marks?.[0]?.profilepic,
+                                        "/uploads/students/default.png",
+                                        api.defaults.baseURL
+                                    )}
                                     alt="student"
                                     className="w-[120px] h-[150px] object-cover border-2 border-gray-700 bg-white"
                                     crossOrigin="anonymous"
@@ -197,8 +202,7 @@ const MarksheetLayout = ({
 
                                         e.currentTarget.onerror = null;
 
-                                        e.currentTarget.src =
-                                            `${api.defaults.baseURL}/uploads/students/default.png`;
+                                        e.currentTarget.src = `${api.defaults.baseURL}/uploads/students/default.png`;
 
                                     }}
                                 />

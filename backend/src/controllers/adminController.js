@@ -2,6 +2,22 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const { getSupabaseAdmin } = require("../config/supabase");
 
+exports.getAdminLogo = async (req, res) => {
+    try {
+        const { data } = getSupabaseAdmin()
+            .storage
+            .from("admin-assets")
+            .getPublicUrl("admin/logo");
+
+        res.redirect(`${data.publicUrl}?v=${Date.now()}`);
+    } catch (error) {
+        console.error("Get admin logo error:", error);
+        res.status(500).json({
+            message: "Error fetching admin logo"
+        });
+    }
+};
+
 /*
   Get Admin Profile
 */
@@ -43,6 +59,14 @@ exports.getAdminProfile = async (req, res) => {
 
 exports.updateAdminProfile = async (req, res) => {
     try {
+        const adminEmail = req.user?.emailid || req.user?.email;
+
+        if (!adminEmail) {
+            return res.status(401).json({
+                message: "Token does not contain emailid"
+            });
+        }
+
         const {
             collagename,
             address,
@@ -88,6 +112,7 @@ exports.updateAdminProfile = async (req, res) => {
                     message: "Failed to upload admin logo"
                 });
             }
+
         }
 
         await db.query(
@@ -103,6 +128,7 @@ exports.updateAdminProfile = async (req, res) => {
                 twitter = $8,
                 linkedin = $9,
                 password = COALESCE($10, password)
+            WHERE emailid = $11
             `,
             [
                 collagename,
@@ -114,7 +140,8 @@ exports.updateAdminProfile = async (req, res) => {
                 instagram,
                 twitter,
                 linkedin,
-                hashedPassword
+                hashedPassword,
+                adminEmail
             ]
         );
 

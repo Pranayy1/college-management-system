@@ -1,26 +1,10 @@
 const db = require("../config/db");
-const path = require("path");
-const fs = require("fs");
 const ExcelJS = require("exceljs");
 const XLSX = require("xlsx");
-
-/* ================= PROFILE PIC HELPER ================= */
-
-const studentUploadDir = path.resolve(__dirname, "../../uploads/students");
-
-const getStudentImage = (rollnumber) => {
-    if (!fs.existsSync(studentUploadDir)) return "default.png";
-
-    const files = fs.readdirSync(studentUploadDir);
-
-    const match = files.find(file => {
-        const name = path.basename(file, path.extname(file));
-        return name.trim().toLowerCase() === String(rollnumber).trim().toLowerCase();
-    });
-
-    return match || "default.png";
-};
-
+const {
+    STUDENT_IMAGE_BUCKET,
+    getProfileImageUrl
+} = require("../services/profileImageStorage");
 
 const getTodayDate = () => {
     const today = new Date();
@@ -53,7 +37,7 @@ exports.getStudents = async (req, res) => {
 
     try {
         const result = await db.query(
-            `SELECT sr_no, rollnumber, firstname, lastname
+            `SELECT sr_no, rollnumber, firstname, lastname, profilepic
              FROM students
              WHERE Courcecode = $1 AND semoryear = $2
              ORDER BY rollnumber`,
@@ -65,7 +49,7 @@ exports.getStudents = async (req, res) => {
             rollnumber: student.rollnumber,
             firstname: student.firstname,
             lastname: student.lastname,
-            profilepic: getStudentImage(student.rollnumber)
+            profilepic: getProfileImageUrl(STUDENT_IMAGE_BUCKET, student.profilepic) || "default.png"
         }));
 
         res.json(formatted);

@@ -14,6 +14,7 @@ import {
     X
 } from "lucide-react";
 import api from "../../utils/api";
+import { resolveImageUrl } from "../../utils/imageUrl";
 import ConfirmSaveModal from "../../components/modals/ConfirmSaveModal.jsx";
 import Toast from "../../components/ui/Toast.jsx";
 
@@ -85,7 +86,7 @@ const AdminProfile = () => {
                 <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                         <div className="relative">
-                            <img src={admin?.logo ? `${api.defaults.baseURL}${admin.logo}` : `${api.defaults.baseURL}/uploads/admin/default.png`}
+                            <img src={resolveImageUrl(admin?.logo, "/uploads/admin/default.png", api.defaults.baseURL)}
                                  alt="Logo" className="h-24 w-24 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" />
                         </div>
                         <div className="text-center sm:text-left">
@@ -193,7 +194,7 @@ const StyledInput = ({ label, name, value, onChange, type = "text" }) => (
 const EditDetailsModal = ({ admin, token, onClose }) => {
     const [form, setForm] = useState({ ...admin, password: "" });
     const [logoFile, setLogoFile] = useState(null);
-    const [preview, setPreview] = useState(admin.logo ? `${api.defaults.baseURL}${admin.logo}` : null);
+    const [preview, setPreview] = useState(resolveImageUrl(admin.logo, "/uploads/admin/default.png", api.defaults.baseURL));
     const [showPassword, setShowPassword] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
 

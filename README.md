@@ -287,7 +287,7 @@ npx vercel dev -L
 
 This uses the same `/api`, `/uploads`, `/status`, and frontend routes as a Vercel deployment. Vercel CLI 47.0.5 or later is required. Browser requests use same-origin URLs, and the regular Vite development server proxies backend paths to `localhost:5000`.
 
-For deployment, configure the backend and frontend environment variables in Vercel. Set `BASE_URL` to the deployed origin used for the Google OAuth callback. Profile and other image uploads currently use the backend filesystem; Vercel function files are not persistent, so those uploads need persistent object storage before being relied on in production.
+For deployment, configure the backend and frontend environment variables in Vercel. Set `BASE_URL` to the deployed origin used for the Google OAuth callback. The backend requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for persistent image storage. Profile images and the admin logo use Supabase Storage; Excel imports are processed from memory. The backend `/uploads` route serves only bundled fallback images and the marksheet signature, not user uploads.
 
 > Environment variables and credentials should never be committed to the repository.
 

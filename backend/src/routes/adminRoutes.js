@@ -11,6 +11,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage,
+
     limits: {
         fileSize: 1024 * 1024 // 1MB
     },
@@ -26,6 +27,8 @@ const upload = multer({
 });
 
 /* Routes */
+
+router.get("/logo", adminController.getAdminLogo);
 
 router.get(
     "/profile",

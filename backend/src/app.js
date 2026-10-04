@@ -51,7 +51,7 @@ app.get("/status", (req, res) => {
     res.status(200).json({ status: "ok" });
 });
 
-// serve uploaded images
+// Serve bundled fallback images and marksheet assets; user uploads live in Supabase.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use("/api/auth", authRoutes);

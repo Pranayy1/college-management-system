@@ -1,4 +1,9 @@
 const db = require("../config/db");
+const { getSupabaseAdmin } = require("../config/supabase");
+const {
+    STUDENT_IMAGE_BUCKET,
+    getProfileImageUrl
+} = require("../services/profileImageStorage");
 
 // =========================================================
 // Public Marksheet Verification Controller
@@ -31,6 +36,10 @@ exports.verifyMarksheet = async (req, res) => {
 
         const adminRows = adminResult.rows;
         const collegeName = adminRows.length ? adminRows[0].collagename : "College";
+        const { data: logoData } = getSupabaseAdmin()
+            .storage
+            .from("admin-assets")
+            .getPublicUrl("admin/logo");
 
         // 3. Fetch Student Data
         // Using your exact column names: Courcecode, semoryear
@@ -166,10 +175,13 @@ exports.verifyMarksheet = async (req, res) => {
             isValid: true,
             verificationId: marksheetId,
             collegeName,
+            collegeLogo: `${logoData.publicUrl}?v=${Date.now()}`,
             student: {
                 rollnumber: student.rollnumber,
                 name: `${student.firstname} ${student.lastname}`.trim(),
-                profilepic: student.profilepic || "default.png"
+                profilepic:
+                    getProfileImageUrl(STUDENT_IMAGE_BUCKET, student.profilepic) ||
+                    "default.png"
             },
             academic: {
                 courseCode,

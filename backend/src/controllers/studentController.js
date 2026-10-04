@@ -1,9 +1,13 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const XLSX = require("xlsx");
-const path = require("path");
-const fs = require("fs");
 const ExcelJS = require("exceljs");
+const {
+  STUDENT_IMAGE_BUCKET,
+  uploadProfileImage,
+  getProfileImageUrl,
+  removeProfileImage
+} = require("../services/profileImageStorage");
 
 // ============================
 // Get Student Profile
@@ -24,7 +28,10 @@ exports.getStudentProfile = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    res.json(rows[0]);
+    res.json({
+      ...rows[0],
+      profilepic: getProfileImageUrl(STUDENT_IMAGE_BUCKET, rows[0].profilepic)
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error fetching profile" });
@@ -75,12 +82,41 @@ exports.updateStudentProfile = async (req, res) => {
     const email = req.user.email;
     const { emailid, contactnumber, state, city } = req.body;
 
-    await db.query(
-        `UPDATE students
-         SET emailid = $1, contactnumber = $2, state = $3, city = $4
-         WHERE emailid = $5`,
-        [emailid, contactnumber, state, city, email]
+    const studentResult = await db.query(
+      "SELECT rollnumber, profilepic FROM students WHERE emailid = $1",
+      [email]
     );
+    if (!studentResult.rows.length) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const current = studentResult.rows[0];
+    const profilepic = req.file
+      ? await uploadProfileImage(STUDENT_IMAGE_BUCKET, current.rollnumber, req.file)
+      : current.profilepic;
+
+    try {
+      await db.query(
+          `UPDATE students
+         SET emailid = $1, contactnumber = $2, state = $3, city = $4,
+             profilepic = $5
+         WHERE emailid = $6`,
+          [emailid, contactnumber, state, city, profilepic, email]
+      );
+    } catch (error) {
+      if (req.file && current.profilepic !== profilepic) {
+        try {
+          await removeProfileImage(STUDENT_IMAGE_BUCKET, profilepic);
+        } catch (cleanupError) {
+          console.error("Student profile image cleanup after failed update also failed:", cleanupError);
+        }
+      }
+      throw error;
+    }
+
+    if (req.file && current.profilepic !== profilepic) {
+      await removeProfileImage(STUDENT_IMAGE_BUCKET, current.profilepic);
+    }
 
     res.json({ message: "Profile updated successfully" });
   } catch (error) {
@@ -93,21 +129,6 @@ exports.updateStudentProfile = async (req, res) => {
 // Admin: Get All Students
 // ============================
 
-const studentUploadDir = path.resolve(__dirname, "../../uploads/students");
-
-const getStudentImage = (rollnumber) => {
-  if (!fs.existsSync(studentUploadDir)) return "default.png";
-
-  const files = fs.readdirSync(studentUploadDir);
-
-  const match = files.find((file) => {
-    const name = path.basename(file, path.extname(file));
-    return name.trim().toLowerCase() === String(rollnumber).trim().toLowerCase();
-  });
-
-  return match || "default.png";
-};
-
 exports.getAllStudents = async (req, res) => {
   try {
     const result = await db.query(
@@ -118,7 +139,7 @@ exports.getAllStudents = async (req, res) => {
 
     const updatedStudents = rows.map((student) => ({
       ...student,
-      profilepic: getStudentImage(student.rollnumber),
+      profilepic: getProfileImageUrl(STUDENT_IMAGE_BUCKET, student.profilepic),
     }));
 
     res.json(updatedStudents);
@@ -186,9 +207,12 @@ exports.createStudent = async (req, res) => {
     const finalPassword = password || dateofbirth;
     const hashedPassword = await bcrypt.hash(finalPassword, 10);
 
-    const profilepic = req.file ? req.file.filename : null;
+    const profilepic = req.file
+      ? await uploadProfileImage(STUDENT_IMAGE_BUCKET, rollnumber, req.file)
+      : null;
 
-    await db.query(
+    try {
+      await db.query(
         `INSERT INTO students
          (Courcecode, semoryear, rollnumber, optionalsubject, firstname, lastname, emailid,
           contactnumber, dateofbirth, gender, state, city,
@@ -218,7 +242,17 @@ exports.createStudent = async (req, res) => {
           0,
           admissiondate || null
         ]
-    );
+      );
+    } catch (error) {
+      if (profilepic) {
+        try {
+          await removeProfileImage(STUDENT_IMAGE_BUCKET, profilepic);
+        } catch (cleanupError) {
+          console.error("Student profile image cleanup after failed creation also failed:", cleanupError);
+        }
+      }
+      throw error;
+    }
 
     res.json({ message: "Student created successfully" });
 
@@ -256,6 +290,19 @@ exports.updateStudent = async (req, res) => {
       password,
       activestatus
     } = req.body;
+
+    const existingResult = await db.query(
+      "SELECT profilepic FROM students WHERE sr_no = $1",
+      [id]
+    );
+    if (!existingResult.rows.length) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const currentProfilepic = existingResult.rows[0].profilepic;
+    const newProfilepic = req.file
+      ? await uploadProfileImage(STUDENT_IMAGE_BUCKET, rollnumber, req.file)
+      : null;
 
     const nameParts = fullname.trim().split(" ");
     const firstname = nameParts[0];
@@ -311,14 +358,29 @@ exports.updateStudent = async (req, res) => {
     }
 
     if (req.file) {
-      values.push(req.file.filename);
+      values.push(newProfilepic);
       updateQuery += `, profilepic = $${values.length}`;
     }
 
     values.push(id);
     updateQuery += ` WHERE sr_no = $${values.length}`;
 
-    await db.query(updateQuery, values);
+    try {
+      await db.query(updateQuery, values);
+    } catch (error) {
+      if (req.file && currentProfilepic !== newProfilepic) {
+        try {
+          await removeProfileImage(STUDENT_IMAGE_BUCKET, newProfilepic);
+        } catch (cleanupError) {
+          console.error("Student profile image cleanup after failed update also failed:", cleanupError);
+        }
+      }
+      throw error;
+    }
+
+    if (req.file && currentProfilepic !== newProfilepic) {
+      await removeProfileImage(STUDENT_IMAGE_BUCKET, currentProfilepic);
+    }
 
     res.json({ message: "Student updated successfully" });
 
@@ -337,7 +399,7 @@ exports.deleteStudent = async (req, res) => {
     const { id } = req.params;
 
     const result = await db.query(
-        "SELECT rollnumber FROM students WHERE sr_no = $1",
+        "SELECT profilepic FROM students WHERE sr_no = $1",
         [id]
     );
 
@@ -347,22 +409,14 @@ exports.deleteStudent = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    const rollnumber = rows[0].rollnumber;
+    const profilepic = rows[0].profilepic;
 
     await db.query(
         "DELETE FROM students WHERE sr_no = $1",
         [id]
     );
 
-    const dynamicImage = getStudentImage(rollnumber);
-
-    if (dynamicImage !== "default.png") {
-      const filePath = path.join(studentUploadDir, dynamicImage);
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
+    await removeProfileImage(STUDENT_IMAGE_BUCKET, profilepic);
 
     res.json({ message: "Student deleted successfully" });
 
@@ -456,15 +510,13 @@ exports.importStudentsFromExcel = async (req, res) => {
     return res.status(400).json({ message: "No file uploaded" });
   }
 
-  const filePath = req.file.path;
-
   let totalRows = 0;
   let inserted = 0;
   let duplicates = 0;
   let invalidRows = 0;
 
   try {
-    const workbook = XLSX.readFile(filePath);
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
 
@@ -545,8 +597,6 @@ exports.importStudentsFromExcel = async (req, res) => {
         }
       }
     }
-
-    fs.unlinkSync(filePath);
 
     res.json({
       totalRows,

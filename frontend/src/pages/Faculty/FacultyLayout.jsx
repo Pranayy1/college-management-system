@@ -1,19 +1,12 @@
 import AppLayout from "../../components/layout/AppLayout";
 import { facultyNavigation } from "../../config/navigation";
+import { resolveImageUrl } from "../../utils/imageUrl";
 
 const getFacultyProfile = ({
                              user,
                              baseUrl,
                              imgBust,
                            }) => {
-  let profilePath = "/uploads/faculties/default.png";
-
-  if (user?.profilepic) {
-    profilePath = String(user.profilepic).startsWith("/uploads/")
-        ? user.profilepic
-        : `/uploads/faculties/${user.profilepic}`;
-  }
-
   const lastLoginRaw =
       user?.lastlogin ??
       user?.lastLogin ??
@@ -30,7 +23,11 @@ const getFacultyProfile = ({
   }
 
   return {
-    image: `${baseUrl}${profilePath}?v=${imgBust}`,
+    image: `${resolveImageUrl(
+        user?.profilepic,
+        "/uploads/faculties/default.png",
+        baseUrl
+    )}?v=${imgBust}`,
     fallbackImage: `${baseUrl}/uploads/faculties/default.png`,
     imageAlt: "Faculty",
     title:

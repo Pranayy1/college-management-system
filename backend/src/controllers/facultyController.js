@@ -4,9 +4,12 @@ const multer = require("multer");
 const path = require("path");
 const ExcelJS = require("exceljs");
 const XLSX = require("xlsx");
-const fs = require("fs");
-
-const facultyUploadDir = path.resolve(__dirname, "../../uploads/faculties");
+const {
+    FACULTY_IMAGE_BUCKET,
+    uploadProfileImage,
+    getProfileImageUrl,
+    removeProfileImage
+} = require("../services/profileImageStorage");
 
 /*
   Faculty Controller
@@ -18,66 +21,26 @@ const facultyUploadDir = path.resolve(__dirname, "../../uploads/faculties");
   - Delete faculty
 */
 
-const getFacultyImage = (facultyid) => {
-    if (!fs.existsSync(facultyUploadDir)) return "default.png";
-
-    const files = fs.readdirSync(facultyUploadDir);
-
-    const match = files.find(file => {
-        const name = path.basename(file, path.extname(file));
-        return name.trim().toLowerCase() === String(facultyid).trim().toLowerCase();
-    });
-
-    return match || "default.png";
-};
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, facultyUploadDir);
-    },
-    filename: (req, file, cb) => {
-        const facultyid = req.body.facultyid;
-        const ext = path.extname(file.originalname).toLowerCase();
-
-        if (!facultyid) {
-            return cb(new Error("Faculty ID required for image naming"));
+const profileUpload = multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+        if (!allowedTypes.includes(file.mimetype)) {
+            return cb(new Error("Only JPG, PNG, and WEBP images are allowed"));
         }
-
-        // Remove any existing image with same facultyid
-        if (fs.existsSync(facultyUploadDir)) {
-            const files = fs.readdirSync(facultyUploadDir);
-
-            files.forEach(file => {
-                const name = path.basename(file, path.extname(file));
-
-                if (name === String(facultyid)) {
-                    fs.unlinkSync(path.join(facultyUploadDir, file));
-                }
-            });
-        }
-
-        cb(null, `${facultyid}${ext}`);
+        cb(null, true);
     }
 });
 
-exports.upload = multer({ storage });
+exports.upload = profileUpload;
 
 
 // ============================
 // Excel Upload Middleware
 // ============================
 
-const excelStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "uploads/temp");
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + "-" + file.originalname);
-    }
-});
-
 exports.uploadExcel = multer({
-    storage: excelStorage,
+    storage: multer.memoryStorage(),
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
 
@@ -150,13 +113,9 @@ exports.createFaculty = async (req, res) => {
         // Default Profile Pic
         // ============================
 
-        let profilepic;
-
-        if (req.file) {
-            profilepic = req.file.filename;
-        } else {
-            profilepic = getFacultyImage(facultyid);
-        }
+        const profilepic = req.file
+            ? await uploadProfileImage(FACULTY_IMAGE_BUCKET, facultyid, req.file)
+            : null;
 
         // ============================
         // Optional Defaults
@@ -169,7 +128,8 @@ exports.createFaculty = async (req, res) => {
         const finalJoinedDate = joineddate || new Date().toISOString();
         const activestatus = 0;
 
-        await db.query(
+        try {
+            await db.query(
             `INSERT INTO faculties
              (facultyid, facultyname, state, city, emailid, contactnumber,
               qualification, experience, birthdate, gender, profilepic,
@@ -197,7 +157,17 @@ exports.createFaculty = async (req, res) => {
                 hashedPassword,
                 activestatus
             ]
-        );
+            );
+        } catch (error) {
+            if (profilepic) {
+                try {
+                    await removeProfileImage(FACULTY_IMAGE_BUCKET, profilepic);
+                } catch (cleanupError) {
+                    console.error("Faculty profile image cleanup after failed creation also failed:", cleanupError);
+                }
+            }
+            throw error;
+        }
 
         res.status(201).json({
             message: "Faculty created successfully"
@@ -273,7 +243,10 @@ exports.getFaculties = async (req, res) => {
             ORDER BY f.sr_no DESC
         `);
 
-        res.json(result.rows);
+        res.json(result.rows.map(faculty => ({
+            ...faculty,
+            profilepic: getProfileImageUrl(FACULTY_IMAGE_BUCKET, faculty.profilepic)
+        })));
 
     } catch (error) {
         console.error(error);
@@ -344,31 +317,10 @@ exports.updateFaculty = async (req, res) => {
             });
         }
 
-        const oldFacultyId = rows[0].facultyid;
         let finalProfilePic = rows[0].profilepic;
 
-        // If new image uploaded
-
         if (req.file) {
-            finalProfilePic = req.file.filename;
-        }
-
-        // If facultyid changed but no new image
-
-        else if (
-            oldFacultyId !== facultyid &&
-            finalProfilePic &&
-            finalProfilePic !== "default.png"
-        ) {
-            const ext = path.extname(finalProfilePic);
-            const oldPath = path.join(facultyUploadDir, finalProfilePic);
-            const newFileName = `${facultyid}${ext}`;
-            const newPath = path.join(facultyUploadDir, newFileName);
-
-            if (fs.existsSync(oldPath)) {
-                fs.renameSync(oldPath, newPath);
-                finalProfilePic = newFileName;
-            }
+            finalProfilePic = await uploadProfileImage(FACULTY_IMAGE_BUCKET, facultyid, req.file);
         }
 
         let query = `
@@ -420,7 +372,22 @@ exports.updateFaculty = async (req, res) => {
         query += ` WHERE sr_no = $${values.length + 1}`;
         values.push(id);
 
-        await db.query(query, values);
+        try {
+            await db.query(query, values);
+        } catch (error) {
+            if (req.file && rows[0].profilepic !== finalProfilePic) {
+                try {
+                    await removeProfileImage(FACULTY_IMAGE_BUCKET, finalProfilePic);
+                } catch (cleanupError) {
+                    console.error("Faculty profile image cleanup after failed update also failed:", cleanupError);
+                }
+            }
+            throw error;
+        }
+
+        if (req.file && rows[0].profilepic !== finalProfilePic) {
+            await removeProfileImage(FACULTY_IMAGE_BUCKET, rows[0].profilepic);
+        }
 
         res.json({
             message: "Faculty updated successfully"
@@ -464,13 +431,7 @@ exports.deleteFaculty = async (req, res) => {
             [id]
         );
 
-        if (profilepic && profilepic !== "default.png") {
-            const filePath = path.join(facultyUploadDir, profilepic);
-
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
+        await removeProfileImage(FACULTY_IMAGE_BUCKET, profilepic);
 
         res.json({
             message: "Faculty deleted successfully"
@@ -666,8 +627,6 @@ exports.importFacultiesFromExcel = async (req, res) => {
         });
     }
 
-    const filePath = req.file.path;
-
     let totalRows = 0;
     let inserted = 0;
     let duplicates = 0;
@@ -676,7 +635,7 @@ exports.importFacultiesFromExcel = async (req, res) => {
     const errors = [];
 
     try {
-        const workbook = XLSX.readFile(filePath);
+        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
@@ -826,7 +785,7 @@ exports.importFacultiesFromExcel = async (req, res) => {
                         experience,
                         birthdate,
                         gender,
-                        getFacultyImage(facultyid),
+                        null,
                         courcecode,
                         0,
                         "NOT ASSIGNED",
@@ -858,10 +817,6 @@ exports.importFacultiesFromExcel = async (req, res) => {
                 }
             }
         }
-
-        // Delete temp file
-
-        fs.unlinkSync(filePath);
 
         res.json({
             totalRows,
@@ -931,7 +886,10 @@ exports.getFacultySelfProfile = async (req, res) => {
             });
         }
 
-        return res.json(rows[0]);
+        return res.json({
+            ...rows[0],
+            profilepic: getProfileImageUrl(FACULTY_IMAGE_BUCKET, rows[0].profilepic)
+        });
 
     } catch (error) {
         console.error("getFacultySelfProfile error:", error);
@@ -1030,7 +988,7 @@ exports.updateFacultyProfile = async (req, res) => {
         }
 
         const facultyResult = await db.query(
-            `SELECT sr_no, facultyid
+            `SELECT sr_no, facultyid, profilepic
              FROM faculties
              WHERE emailid = $1
              LIMIT 1`,
@@ -1062,33 +1020,13 @@ exports.updateFacultyProfile = async (req, res) => {
 
         const sets = [];
         const values = [];
+        let uploadedProfilepic = null;
 
         for (const key of allowed) {
             if (req.body[key] !== undefined) {
                 values.push(req.body[key]);
                 sets.push(`${key} = $${values.length}`);
             }
-        }
-
-        if (req.file) {
-            const facultyid = current.facultyid;
-
-            const ext =
-                path.extname(req.file.filename).toLowerCase() ||
-                path.extname(req.file.originalname).toLowerCase();
-
-            deleteOldFacultyPhoto(facultyid);
-
-            const finalFileName = `${facultyid}${ext}`;
-            const finalPath = path.join(
-                facultyUploadDir,
-                finalFileName
-            );
-
-            fs.renameSync(req.file.path, finalPath);
-
-            values.push(finalFileName);
-            sets.push(`profilepic = $${values.length}`);
         }
 
         if (
@@ -1104,6 +1042,17 @@ exports.updateFacultyProfile = async (req, res) => {
             sets.push(`password = $${values.length}`);
         }
 
+        if (req.file) {
+            uploadedProfilepic = await uploadProfileImage(
+                FACULTY_IMAGE_BUCKET,
+                current.facultyid,
+                req.file
+            );
+
+            values.push(uploadedProfilepic);
+            sets.push(`profilepic = $${values.length}`);
+        }
+
         if (!sets.length) {
             return res.status(400).json({
                 message: "Nothing to update"
@@ -1112,12 +1061,29 @@ exports.updateFacultyProfile = async (req, res) => {
 
         values.push(current.sr_no);
 
-        await db.query(
-            `UPDATE faculties
-             SET ${sets.join(", ")}
-             WHERE sr_no = $${values.length}`,
-            values
-        );
+        try {
+            await db.query(
+                `UPDATE faculties
+                 SET ${sets.join(", ")}
+                 WHERE sr_no = $${values.length}`,
+                values
+            );
+        } catch (error) {
+            if (uploadedProfilepic) {
+                try {
+                    await removeProfileImage(FACULTY_IMAGE_BUCKET, uploadedProfilepic);
+                } catch (cleanupError) {
+                    console.error("Faculty profile image cleanup after failed update also failed:", cleanupError);
+                }
+            }
+            throw error;
+        }
+
+        if (req.file) {
+            if (current.profilepic !== uploadedProfilepic) {
+                await removeProfileImage(FACULTY_IMAGE_BUCKET, current.profilepic);
+            }
+        }
 
         const updatedResult = await db.query(
             `SELECT
@@ -1146,7 +1112,13 @@ exports.updateFacultyProfile = async (req, res) => {
             [current.sr_no]
         );
 
-        return res.json(updatedResult.rows[0]);
+        return res.json({
+            ...updatedResult.rows[0],
+            profilepic: getProfileImageUrl(
+                FACULTY_IMAGE_BUCKET,
+                updatedResult.rows[0].profilepic
+            )
+        });
 
     } catch (error) {
         console.error("updateFacultyProfile error:", error);
@@ -1339,57 +1311,7 @@ exports.changeFacultyEmail = async (req, res) => {
 // FACULTY SELF PROFILE UPLOAD
 // ============================
 
-const facultyTmpDir = path.resolve(
-    __dirname,
-    "../../uploads/faculties/tmp"
-);
-
-if (!fs.existsSync(facultyTmpDir)) {
-    fs.mkdirSync(facultyTmpDir, {
-        recursive: true
-    });
-}
-
-const profileStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, facultyTmpDir);
-    },
-
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-
-        cb(
-            null,
-            `tmp_${Date.now()}${ext}`
-        );
-    }
-});
-
-exports.uploadProfile = multer({
-    storage: profileStorage
-});
-
-const deleteOldFacultyPhoto = (facultyid) => {
-    if (!fs.existsSync(facultyUploadDir)) return;
-
-    const files = fs.readdirSync(facultyUploadDir);
-
-    files.forEach((file) => {
-        const name = path.basename(
-            file,
-            path.extname(file)
-        );
-
-        if (name === String(facultyid)) {
-            fs.unlinkSync(
-                path.join(
-                    facultyUploadDir,
-                    file
-                )
-            );
-        }
-    });
-};
+exports.uploadProfile = profileUpload;
 
 
 // ==============================

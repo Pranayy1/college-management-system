@@ -15,6 +15,7 @@ import {
     X,
 } from "lucide-react";
 import api from "../../utils/api";
+import { resolveImageUrl } from "../../utils/imageUrl";
 import ConfirmSaveModal from "../../components/modals/ConfirmSaveModal";
 
 const FacultyProfile = () => {
@@ -51,14 +52,11 @@ const FacultyProfile = () => {
     }, [token]);
 
     const profileImg = useMemo(() => {
-        let url = "";
-        if (!faculty?.profilepic) {
-            url = `${api.defaults.baseURL}/uploads/faculties/default.png`;
-        } else if (String(faculty.profilepic).startsWith("/uploads/")) {
-            url = `${api.defaults.baseURL}${faculty.profilepic}`;
-        } else {
-            url = `${api.defaults.baseURL}/uploads/faculties/${faculty.profilepic}`;
-        }
+        const url = resolveImageUrl(
+            faculty?.profilepic,
+            "/uploads/faculties/default.png",
+            api.defaults.baseURL
+        );
         return `${url}?v=${imgBust}`;
     }, [faculty, imgBust]);
 
@@ -228,7 +226,7 @@ const EditDetailsModal = ({ faculty, token, onClose }) => {
     });
 
     const [profileFile, setProfileFile] = useState(null);
-    const [preview, setPreview] = useState(`${api.defaults.baseURL}/uploads/faculties/${faculty.profilepic || 'default.png'}`);
+    const [preview, setPreview] = useState(resolveImageUrl(faculty.profilepic, "/uploads/faculties/default.png", api.defaults.baseURL));
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showPass, setShowPass] = useState(false);

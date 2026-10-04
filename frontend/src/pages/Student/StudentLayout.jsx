@@ -1,21 +1,18 @@
 import AppLayout from "../../components/layout/AppLayout";
 import { studentNavigation } from "../../config/navigation";
+import { resolveImageUrl } from "../../utils/imageUrl";
 
 const StudentLayout = () => {
   const getProfile = ({
                         user,
                         baseUrl,
                       }) => {
-    let profilePath = "/uploads/students/default.png";
-
-    if (user?.profilepic) {
-      profilePath = String(user.profilepic).startsWith("/uploads/")
-          ? user.profilepic
-          : `/uploads/students/${user.profilepic}`;
-    }
-
     return {
-      image: `${baseUrl}${profilePath}`,
+      image: resolveImageUrl(
+          user?.profilepic,
+          "/uploads/students/default.png",
+          baseUrl
+      ),
       fallbackImage: `${baseUrl}/uploads/students/default.png`,
       imageAlt: "Profile",
       title: user
