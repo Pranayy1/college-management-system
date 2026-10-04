@@ -1,44 +1,38 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
-const fs = require("fs");
-const path = require("path");
+const { getSupabaseAdmin } = require("../config/supabase");
 
 /*
   Get Admin Profile
 */
-const adminUploadDir = path.resolve(__dirname, "../../uploads/admin");
-
-const getAdminLogo = () => {
-    if (!fs.existsSync(adminUploadDir)) return "default.png";
-
-    const files = fs.readdirSync(adminUploadDir);
-
-    const match = files.find(file => {
-        const name = path.basename(file, path.extname(file));
-        return name === "admin";
-    });
-
-    return match || "default.png";
-};
-
 exports.getAdminProfile = async (req, res) => {
     try {
         const { rows } = await db.query("SELECT * FROM admin LIMIT 1");
 
         if (rows.length === 0) {
-            return res.status(404).json({ message: "Admin not found" });
+            return res.status(404).json({
+                message: "Admin not found"
+            });
         }
 
         const admin = rows[0];
 
-        const logoFile = getAdminLogo();
-        admin.logo = `/uploads/admin/${logoFile}?v=${Date.now()}`;
+        const supabase = getSupabaseAdmin();
+
+        const { data } = supabase.storage
+            .from("admin-assets")
+            .getPublicUrl("admin/logo");
+
+        admin.logo = `${data.publicUrl}?v=${Date.now()}`;
 
         res.json(admin);
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error fetching admin" });
+        console.error("Get admin profile error:", error);
+
+        res.status(500).json({
+            message: "Error fetching admin"
+        });
     }
 };
 
@@ -69,47 +63,47 @@ exports.updateAdminProfile = async (req, res) => {
         }
 
         if (req.file) {
-            if (!fs.existsSync(adminUploadDir)) {
-                fs.mkdirSync(adminUploadDir, { recursive: true });
+            const allowedTypes = ["image/png", "image/jpeg"];
+
+            if (!allowedTypes.includes(req.file.mimetype)) {
+                return res.status(400).json({
+                    message: "Only PNG, JPG, JPEG allowed"
+                });
             }
 
-            const ext = path.extname(req.file.originalname).toLowerCase();
-            const allowedExt = [".png", ".jpg", ".jpeg"];
+            const supabase = getSupabaseAdmin();
 
-            if (!allowedExt.includes(ext)) {
-                fs.unlinkSync(req.file.path);
-                return res.status(400).json({ message: "Only PNG, JPG, JPEG allowed" });
+            const { error } = await supabase.storage
+                .from("admin-assets")
+                .upload("admin/logo", req.file.buffer, {
+                    contentType: req.file.mimetype,
+                    upsert: true,
+                    cacheControl: "3600"
+                });
+
+            if (error) {
+                console.error("Supabase logo upload error:", error);
+
+                return res.status(500).json({
+                    message: "Failed to upload admin logo"
+                });
             }
-
-            // Remove existing admin image
-            const files = fs.readdirSync(adminUploadDir);
-            files.forEach(file => {
-                const name = path.basename(file, path.extname(file));
-                if (name === "admin") {
-                    fs.unlinkSync(path.join(adminUploadDir, file));
-                }
-            });
-
-            const newFileName = `admin${ext}`;
-            const newFilePath = path.join(adminUploadDir, newFileName);
-
-            fs.renameSync(req.file.path, newFilePath);
         }
 
         await db.query(
             `
-UPDATE admin
-SET collagename = $1,
-    address = $2,
-    emailid = $3,
-    contactnumber = $4,
-    website = $5,
-    facebook = $6,
-    instagram = $7,
-    twitter = $8,
-    linkedin = $9,
-    password = COALESCE($10, password)
-        `,
+            UPDATE admin
+            SET collagename = $1,
+                address = $2,
+                emailid = $3,
+                contactnumber = $4,
+                website = $5,
+                facebook = $6,
+                instagram = $7,
+                twitter = $8,
+                linkedin = $9,
+                password = COALESCE($10, password)
+            `,
             [
                 collagename,
                 address,
@@ -124,10 +118,15 @@ SET collagename = $1,
             ]
         );
 
-        res.json({ message: "Admin updated successfully" });
+        res.json({
+            message: "Admin updated successfully"
+        });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Update failed" });
+        console.error("Update admin profile error:", error);
+
+        res.status(500).json({
+            message: "Update failed"
+        });
     }
 };
