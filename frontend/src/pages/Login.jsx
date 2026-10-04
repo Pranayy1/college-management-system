@@ -62,7 +62,7 @@ const Login = () => {
 
     const loginWithGoogleNative = async () => {
         const platform = isElectron ? "electron" : "android";
-        const url = `${import.meta.env.VITE_BACKEND}/api/auth/google-redirect?platform=${platform}`;
+        const url = `${BASE_URL}/api/auth/google-redirect?platform=${platform}`;
         if (isElectron) {
             window.location.href = url;
         } else {

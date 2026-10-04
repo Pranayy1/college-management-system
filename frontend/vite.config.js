@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import process from "node:process";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
@@ -10,7 +11,7 @@ export default defineConfig(({ mode }) => {
 
   return {
 
-    base: "./",
+    base: process.env.VERCEL ? "/" : "./",
 
     plugins: [
       react(),
@@ -88,6 +89,11 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       strictPort: true,
+      proxy: {
+        "/api": "http://localhost:5000",
+        "/uploads": "http://localhost:5000",
+        "/status": "http://localhost:5000",
+      },
     },
 
   };
