@@ -38,7 +38,7 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-            - name: Build web application
+      - name: Build web application
         working-directory: frontend
         env:
           VITE_BACKEND: https://cms-beryl-seven.vercel.app
