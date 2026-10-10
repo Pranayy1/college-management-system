@@ -6,7 +6,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => {
 
-  const isElectron = process.env.ELECTRON === "true";
+  const isElectron = mode === "electron" || process.env.ELECTRON === "true";
   const isProduction = mode === "production" && !isElectron;
 
   return {
@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: "autoUpdate",
 
-        includeAssets: ["favicon.ico"],
+        includeAssets: ["favicon.png"],
 
         manifest: {
           name: "College Management System",
@@ -35,14 +35,16 @@ export default defineConfig(({ mode }) => {
           scope: "/",
           icons: [
             {
-              src: "/pwa-192.png",
+              src: "/icons/icon-192.webp",
               sizes: "192x192",
-              type: "image/png",
+              type: "image/webp",
+              purpose: "any",
             },
             {
-              src: "/pwa-512.png",
+              src: "/icons/icon-512.webp",
               sizes: "512x512",
-              type: "image/png",
+              type: "image/webp",
+              purpose: "any",
             },
           ],
         },

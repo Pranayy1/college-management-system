@@ -20,11 +20,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:electron": "vite build --mode electron",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron": "electron .",
-    "dist": "ELECTRON=true vite build && electron-builder",
-    "dist:win": "ELECTRON=true vite build && electron-builder --win"
+    "electron": "npm run build:electron && electron .",
+    "dist": "npm run build:electron && electron-builder",
+    "dist:win": "npm run build:electron && electron-builder --win"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
